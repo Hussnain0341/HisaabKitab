@@ -1,0 +1,199 @@
+.connection-status {
+  background: #f8f9fa;
+  border-bottom: 1px solid #dee2e6;
+  padding: 8px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 13px;
+  flex-wrap: wrap;
+}
+
+.connection-status.connected {
+  background: #d1fae5;
+  border-bottom-color: #a7f3d0;
+}
+
+.connection-status.offline {
+  background: #fee2e2;
+  border-bottom-color: #fecaca;
+}
+
+.connection-status.checking {
+  opacity: 0.7;
+}
+
+.connection-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.status-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #6b7280;
+  display: inline-block;
+}
+
+.connection-status.connected .status-dot {
+  background: #059669;
+  animation: pulse 2s infinite;
+}
+
+.connection-status.offline .status-dot {
+  background: #dc2626;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.status-text {
+  font-weight: 500;
+  color: #374151;
+}
+
+.connection-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.btn-refresh {
+  background: #2563eb;
+  color: white;
+  border: none;
+  padding: 4px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-refresh:hover {
+  background: #1d4ed8;
+}
+
+.read-only-badge {
+  background: #fbbf24;
+  color: #92400e;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.connection-menu {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.server-url {
+  font-size: 12px;
+  color: #6b7280;
+  font-family: monospace;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.btn-link {
+  background: none;
+  border: none;
+  color: #2563eb;
+  font-size: 12px;
+  cursor: pointer;
+  text-decoration: underline;
+  padding: 0;
+}
+
+.btn-link:hover {
+  color: #1d4ed8;
+}
+
+.server-config {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+  align-items: center;
+}
+
+.server-url-input {
+  padding: 4px 8px;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  font-size: 12px;
+  width: 200px;
+}
+
+.btn-small {
+  padding: 4px 8px;
+  border: none;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  background: #2563eb;
+  color: white;
+}
+
+.btn-small.btn-secondary {
+  background: #6b7280;
+}
+
+.connection-status.refreshing {
+  animation: shake 0.5s;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  75% { transform: translateX(5px); }
+}
+
+.connection-warning {
+  background: #fef3c7;
+  border-bottom: 1px solid #fbbf24;
+  color: #92400e;
+  padding: 4px 12px;
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  position: relative;
+  z-index: 100;
+}
+
+/* Hide connection status when connected in local mode */
+.connection-status.connected:not(.has-client) {
+  display: none;
+}
+
+/* Make warning less prominent */
+.connection-warning span {
+  font-size: 10px;
+}
+
+/* Responsive */
+@media (max-width: 1366px) {
+  .connection-status {
+    font-size: 12px;
+    padding: 6px 12px;
+  }
+  
+  .server-url {
+    max-width: 150px;
+  }
+}
+

@@ -1,0 +1,200 @@
+.loading {
+  text-align: center;
+  padding: 40px;
+  font-size: 18px;
+  color: #666;
+}
+
+.error-message {
+  background-color: #fee;
+  color: #c33;
+  padding: 12px 16px;
+  border-radius: 6px;
+  margin-bottom: 20px;
+  border: 1px solid #fcc;
+}
+
+.card-header {
+  margin-bottom: 18px;
+  padding: 0;
+}
+
+.card-header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  padding: 0;
+  margin: 0;
+}
+
+.card-header-content h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #0f172a;
+  flex: 1;
+}
+
+.card-header-content .btn {
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.table-container {
+  overflow-x: auto;
+  margin-top: 16px;
+}
+
+.suppliers-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.suppliers-table thead {
+  background-color: #f8f9fa;
+  border-bottom: 2px solid #dee2e6;
+}
+
+.suppliers-table th {
+  padding: 12px;
+  text-align: left;
+  font-weight: 600;
+  color: #495057;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.suppliers-table td {
+  padding: 12px;
+  border-bottom: 1px solid #dee2e6;
+  color: #333;
+}
+
+.suppliers-table tbody tr {
+  transition: background-color 0.2s;
+}
+
+.suppliers-table tbody tr:hover {
+  background-color: #f8f9fa;
+}
+
+.suppliers-table .empty-state {
+  text-align: center;
+  padding: 40px;
+  color: #999;
+  font-style: italic;
+}
+
+.suppliers-table .positive-balance {
+  color: #059669;
+  font-weight: 600;
+}
+
+.suppliers-table .negative-balance {
+  color: #dc2626;
+  font-weight: 600;
+}
+
+.actions-cell {
+  white-space: nowrap;
+}
+
+.btn-icon {
+  background: none;
+  border: none;
+  font-size: 18px;
+  cursor: pointer;
+  padding: 4px 8px;
+  margin: 0 2px;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.btn-icon:hover {
+  background-color: #f0f0f0;
+}
+
+.btn-edit:hover {
+  background-color: #dbeafe;
+}
+
+.btn-delete:hover {
+  background-color: #fee;
+}
+
+/* Modal Overlay */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn 0.2s;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.delete-modal {
+  max-width: 400px;
+  padding: 24px;
+}
+
+.delete-modal h3 {
+  margin: 0 0 12px 0;
+  color: #1a1a1a;
+}
+
+.delete-modal p {
+  margin: 0 0 20px 0;
+  color: #666;
+  line-height: 1.5;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+.read-only-notice {
+  color: #f59e0b;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 8px 12px;
+  background: #fef3c7;
+  border-radius: 4px;
+}
+
+.read-only-label {
+  color: #6b7280;
+  font-size: 12px;
+  font-style: italic;
+}
+
+/* Responsive adjustments for 1366x768 */
+@media (max-width: 1366px) {
+  .suppliers-table {
+    font-size: 13px;
+  }
+  
+  .suppliers-table th,
+  .suppliers-table td {
+    padding: 10px 8px;
+  }
+}
+

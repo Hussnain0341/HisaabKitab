@@ -1,0 +1,63 @@
+{
+  "app": {
+    "name": "HisaabKitab",
+    "subtitle": "POS & Inventory"
+  },
+  "menu": {
+    "dashboard": "Dashboard",
+    "inventory": "Inventory",
+    "billing": "Billing",
+    "suppliers": "Suppliers",
+    "reports": "Reports",
+    "settings": "Settings"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "subtitle": "Overview of your shop's performance",
+    "totalProducts": "Total Products",
+    "todaySales": "Today's Sales",
+    "thisMonth": "This Month",
+    "lowStock": "Low Stock Items",
+    "recentSales": "Recent Sales",
+    "quickActions": "Quick Actions",
+    "newSale": "New Sale",
+    "addProduct": "Add Product",
+    "viewReports": "View Reports"
+  },
+  "inventory": {
+    "title": "Inventory",
+    "subtitle": "Manage your shop's products and stock"
+  },
+  "billing": {
+    "title": "Billing",
+    "subtitle": "Create bills and process sales"
+  },
+  "suppliers": {
+    "title": "Suppliers",
+    "subtitle": "Manage your suppliers and purchase orders"
+  },
+  "reports": {
+    "title": "Reports",
+    "subtitle": "View sales, profit/loss, and other reports"
+  },
+  "settings": {
+    "title": "Settings",
+    "subtitle": "Configure your shop settings and preferences"
+  },
+  "common": {
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "add": "Add",
+    "search": "Search"
+  }
+}
+
+
+
+
+

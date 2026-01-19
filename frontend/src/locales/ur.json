@@ -1,0 +1,63 @@
+{
+  "app": {
+    "name": "حساب کتاب",
+    "subtitle": "POS & انوینٹری"
+  },
+  "menu": {
+    "dashboard": "ڈیش بورڈ",
+    "inventory": "انوینٹری",
+    "billing": "بلنگ",
+    "suppliers": "سپلائرز",
+    "reports": "رپورٹس",
+    "settings": "ترتیبات"
+  },
+  "dashboard": {
+    "title": "ڈیش بورڈ",
+    "subtitle": "آپ کی دکان کی کارکردگی کا جائزہ",
+    "totalProducts": "کل مصنوعات",
+    "todaySales": "آج کی فروخت",
+    "thisMonth": "اس مہینے",
+    "lowStock": "کم اسٹاک آئٹمز",
+    "recentSales": "حالیہ فروخت",
+    "quickActions": "فوری اعمال",
+    "newSale": "نیا سیل",
+    "addProduct": "مصنوعات شامل کریں",
+    "viewReports": "رپورٹس دیکھیں"
+  },
+  "inventory": {
+    "title": "انوینٹری",
+    "subtitle": "اپنی دکان کی مصنوعات اور اسٹاک کا انتظام کریں"
+  },
+  "billing": {
+    "title": "بلنگ",
+    "subtitle": "بل بنائیں اور فروخت کریں"
+  },
+  "suppliers": {
+    "title": "سپلائرز",
+    "subtitle": "اپنے سپلائرز اور خریداری کے آرڈرز کا انتظام کریں"
+  },
+  "reports": {
+    "title": "رپورٹس",
+    "subtitle": "فروخت، منافع/نقصان، اور دیگر رپورٹس دیکھیں"
+  },
+  "settings": {
+    "title": "ترتیبات",
+    "subtitle": "اپنی دکان کی ترتیبات اور ترجیحات تشکیل دیں"
+  },
+  "common": {
+    "loading": "لوڈ ہو رہا ہے...",
+    "error": "خرابی",
+    "success": "کامیابی",
+    "save": "محفوظ کریں",
+    "cancel": "منسوخ",
+    "delete": "حذف",
+    "edit": "ترمیم",
+    "add": "شامل کریں",
+    "search": "تلاش"
+  }
+}
+
+
+
+
+

@@ -1,0 +1,59 @@
+{
+  "name": "hisaabkitab",
+  "version": "1.0.0",
+  "description": "Desktop-first, offline POS and inventory software for small Pakistani hardware shops",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "concurrently --kill-others-on-fail \"npm run dev:backend\" \"wait-on http://localhost:5000/api/health && npm run dev:react\" \"wait-on http://localhost:3000 && npm run dev:electron\"",
+    "dev:backend": "cd backend && node server.js",
+    "dev:react": "cd frontend && npm start",
+    "dev:electron": "wait-on http://localhost:3000 && cross-env NODE_ENV=development electron .",
+    "build": "npm run build:react && npm run build:electron",
+    "build:react": "cd frontend && npm run build",
+    "build:electron": "electron-builder",
+    "install:all": "npm install && cd frontend && npm install && cd ../backend && npm install",
+    "setup:db": "node database/setup.js"
+  },
+  "keywords": [
+    "pos",
+    "inventory",
+    "electron",
+    "offline"
+  ],
+  "author": "HisaabKitab",
+  "license": "MIT",
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "cross-env": "^7.0.3",
+    "electron": "^28.0.0",
+    "electron-builder": "^24.9.1",
+    "wait-on": "^7.2.0"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "pg": "^8.11.3",
+    "dotenv": "^16.3.1"
+  },
+  "build": {
+    "appId": "com.hisaabkitab.app",
+    "productName": "HisaabKitab",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "backend/**/*",
+      "frontend/build/**/*",
+      "database/**/*",
+      "assets/**/*"
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "assets/icon.ico"
+    }
+  }
+}
+

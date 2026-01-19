@@ -1,0 +1,215 @@
+const express = require('express');
+const router = express.Router();
+const db = require('../db');
+
+// Get all expenses with optional date filter
+router.get('/', async (req, res) => {
+  try {
+    const { start_date, end_date, category } = req.query;
+    
+    let query = 'SELECT * FROM daily_expenses WHERE 1=1';
+    const params = [];
+    let paramIndex = 1;
+
+    if (start_date) {
+      query += ` AND expense_date >= $${paramIndex}`;
+      params.push(start_date);
+      paramIndex++;
+    }
+
+    if (end_date) {
+      query += ` AND expense_date <= $${paramIndex}`;
+      params.push(end_date);
+      paramIndex++;
+    }
+
+    if (category) {
+      query += ` AND expense_category = $${paramIndex}`;
+      params.push(category);
+      paramIndex++;
+    }
+
+    query += ' ORDER BY expense_date DESC, expense_id DESC';
+
+    const result = await db.query(query, params);
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching expenses:', error);
+    res.status(500).json({ error: 'Failed to fetch expenses', message: error.message });
+  }
+});
+
+// Get expense summary by category
+router.get('/summary', async (req, res) => {
+  try {
+    const { start_date, end_date } = req.query;
+    
+    let query = `
+      SELECT 
+        expense_category,
+        SUM(amount) as total_amount,
+        COUNT(*) as expense_count
+      FROM daily_expenses
+      WHERE 1=1
+    `;
+    const params = [];
+    let paramIndex = 1;
+
+    if (start_date) {
+      query += ` AND expense_date >= $${paramIndex}`;
+      params.push(start_date);
+      paramIndex++;
+    }
+
+    if (end_date) {
+      query += ` AND expense_date <= $${paramIndex}`;
+      params.push(end_date);
+      paramIndex++;
+    }
+
+    query += ' GROUP BY expense_category ORDER BY total_amount DESC';
+
+    const result = await db.query(query, params);
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching expense summary:', error);
+    res.status(500).json({ error: 'Failed to fetch expense summary', message: error.message });
+  }
+});
+
+// Get monthly expense summary
+router.get('/monthly', async (req, res) => {
+  try {
+    const result = await db.query(
+      `SELECT 
+        DATE_TRUNC('month', expense_date) as month,
+        SUM(amount) as total_amount,
+        COUNT(*) as expense_count
+      FROM daily_expenses
+      GROUP BY DATE_TRUNC('month', expense_date)
+      ORDER BY month DESC
+      LIMIT 12`
+    );
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching monthly expenses:', error);
+    res.status(500).json({ error: 'Failed to fetch monthly expenses', message: error.message });
+  }
+});
+
+// Get single expense
+router.get('/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = await db.query(
+      'SELECT * FROM daily_expenses WHERE expense_id = $1',
+      [id]
+    );
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Expense not found' });
+    }
+    
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Error fetching expense:', error);
+    res.status(500).json({ error: 'Failed to fetch expense', message: error.message });
+  }
+});
+
+// Create new expense
+router.post('/', async (req, res) => {
+  try {
+    const { expense_category, amount, expense_date, payment_method, notes } = req.body;
+
+    // Validation
+    if (!expense_category || !expense_category.trim()) {
+      return res.status(400).json({ error: 'Expense category is required' });
+    }
+
+    const expenseAmount = parseFloat(amount);
+    if (!expenseAmount || expenseAmount <= 0) {
+      return res.status(400).json({ error: 'Amount must be greater than 0' });
+    }
+
+    const expenseDate = expense_date ? new Date(expense_date) : new Date();
+    const paymentMethod = payment_method || 'cash';
+
+    const result = await db.query(
+      `INSERT INTO daily_expenses (expense_category, amount, expense_date, payment_method, notes)
+       VALUES ($1, $2, $3, $4, $5)
+       RETURNING *`,
+      [expense_category.trim(), expenseAmount, expenseDate, paymentMethod, notes || null]
+    );
+
+    res.status(201).json(result.rows[0]);
+  } catch (error) {
+    console.error('Error creating expense:', error);
+    res.status(500).json({ error: 'Failed to create expense', message: error.message });
+  }
+});
+
+// Update expense
+router.put('/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { expense_category, amount, expense_date, payment_method, notes } = req.body;
+
+    if (!expense_category || !expense_category.trim()) {
+      return res.status(400).json({ error: 'Expense category is required' });
+    }
+
+    const expenseAmount = parseFloat(amount);
+    if (!expenseAmount || expenseAmount <= 0) {
+      return res.status(400).json({ error: 'Amount must be greater than 0' });
+    }
+
+    const expenseDate = expense_date ? new Date(expense_date) : null;
+
+    const result = await db.query(
+      `UPDATE daily_expenses 
+       SET expense_category = $1, amount = $2, expense_date = COALESCE($3, expense_date), 
+           payment_method = $4, notes = $5
+       WHERE expense_id = $6
+       RETURNING *`,
+      [expense_category.trim(), expenseAmount, expenseDate, payment_method || 'cash', notes || null, id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Expense not found' });
+    }
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Error updating expense:', error);
+    res.status(500).json({ error: 'Failed to update expense', message: error.message });
+  }
+});
+
+// Delete expense
+router.delete('/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const result = await db.query(
+      'DELETE FROM daily_expenses WHERE expense_id = $1 RETURNING expense_id',
+      [id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Expense not found' });
+    }
+
+    res.json({ message: 'Expense deleted successfully', expense_id: id });
+  } catch (error) {
+    console.error('Error deleting expense:', error);
+    res.status(500).json({ error: 'Failed to delete expense', message: error.message });
+  }
+});
+
+module.exports = router;
+
+
+
+
+
