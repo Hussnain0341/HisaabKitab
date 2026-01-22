@@ -7,17 +7,17 @@ const Sidebar = () => {
   const location = useLocation();
 
   const menuItems = [
-    { id: 'dashboard', label: 'Dashboard', path: '/', icon: '📊' },
-    { id: 'inventory', label: 'Inventory', path: '/inventory', icon: '📦' },
+    { id: 'dashboard', label: 'Dashboard', path: '/', icon: '🏠' },
     { id: 'billing', label: 'Billing', path: '/billing', icon: '🧾' },
-    { id: 'suppliers', label: 'Suppliers', path: '/suppliers', icon: '👥' },
+    { id: 'products', label: 'Products', path: '/inventory', icon: '📦' },
     { id: 'customers', label: 'Customers', path: '/customers', icon: '👤' },
-    { id: 'categories', label: 'Categories', path: '/categories', icon: '🏷️' },
+    { id: 'suppliers', label: 'Suppliers', path: '/suppliers', icon: '👥' },
     { id: 'purchases', label: 'Purchases', path: '/purchases', icon: '🛒' },
     { id: 'expenses', label: 'Expenses', path: '/expenses', icon: '💰' },
     { id: 'rate-list', label: 'Rate List', path: '/rate-list', icon: '📋' },
     { id: 'reports', label: 'Reports', path: '/reports', icon: '📈' },
     { id: 'settings', label: 'Settings', path: '/settings', icon: '⚙️' },
+    { id: 'categories', label: 'Product Categories', path: '/categories', icon: '🏷️' },
   ];
 
   const isActive = (path) => {

@@ -1,23 +1,93 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { reportsAPI } from '../services/api';
-import Pagination from './Pagination';
+import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { reportsAPI, customersAPI } from '../services/api';
 import './Reports.css';
 
 const Reports = () => {
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const [activeTab, setActiveTab] = useState('dashboard');
   const [filterType, setFilterType] = useState('monthly');
-  const [reportData, setReportData] = useState(null);
   const [products, setProducts] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
+  const [customers, setCustomers] = useState([]);
   const [selectedProduct, setSelectedProduct] = useState('');
   const [selectedSupplier, setSelectedSupplier] = useState('');
+  const [selectedCustomer, setSelectedCustomer] = useState('');
+  const [selectedSupplierForHistory, setSelectedSupplierForHistory] = useState('');
+  
+  // Sub-tabs for combined tabs
+  const [salesSubTab, setSalesSubTab] = useState('summary'); // 'summary' or 'by-product'
+  const [customerSubTab, setCustomerSubTab] = useState('due-list'); // 'due-list' or 'history'
+  const [supplierSubTab, setSupplierSubTab] = useState('payables'); // 'payables' or 'history'
+  const [expenseSubTab, setExpenseSubTab] = useState('summary'); // 'summary' or 'list'
   const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
   const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
   const [customStartDate, setCustomStartDate] = useState('');
   const [customEndDate, setCustomEndDate] = useState('');
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(20);
+  
+  // Search states
+  const [customerDueSearch, setCustomerDueSearch] = useState('');
+  const [supplierPayablesSearch, setSupplierPayablesSearch] = useState('');
+  const [customerHistorySearch, setCustomerHistorySearch] = useState('');
+  const [supplierHistorySearch, setSupplierHistorySearch] = useState('');
+  const [showCustomerHistoryDropdown, setShowCustomerHistoryDropdown] = useState(false);
+  const [showSupplierHistoryDropdown, setShowSupplierHistoryDropdown] = useState(false);
+  
+  const customerHistoryDropdownRef = useRef(null);
+  const supplierHistoryDropdownRef = useRef(null);
+  
+  // Close dropdowns when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (customerHistoryDropdownRef.current && !customerHistoryDropdownRef.current.contains(event.target)) {
+        setShowCustomerHistoryDropdown(false);
+      }
+      if (supplierHistoryDropdownRef.current && !supplierHistoryDropdownRef.current.contains(event.target)) {
+        setShowSupplierHistoryDropdown(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+  
+  // Dashboard data
+  const [dashboardData, setDashboardData] = useState(null);
+  
+  // Report data
+  const [salesSummary, setSalesSummary] = useState(null);
+  const [salesByProduct, setSalesByProduct] = useState(null);
+  const [profitData, setProfitData] = useState(null);
+  const [customerDueList, setCustomerDueList] = useState(null);
+  const [customerStatement, setCustomerStatement] = useState(null);
+  const [supplierPayables, setSupplierPayables] = useState(null);
+  const [supplierHistory, setSupplierHistory] = useState(null);
+  const [expensesSummary, setExpensesSummary] = useState(null);
+  const [expensesList, setExpensesList] = useState(null);
+  const [lowStock, setLowStock] = useState(null);
+
+  // Handle tab from URL query parameter
+  useEffect(() => {
+    const tabParam = searchParams.get('tab');
+    if (tabParam) {
+      if (tabParam === 'customers') {
+        setActiveTab('customers');
+        setCustomerSubTab('due-list');
+      } else if (tabParam === 'suppliers') {
+        setActiveTab('suppliers');
+        setSupplierSubTab('payables');
+      } else if (tabParam === 'stock-low') {
+        setActiveTab('stock-low');
+      } else {
+        setActiveTab(tabParam);
+      }
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     updateDateRange();
@@ -26,11 +96,50 @@ const Reports = () => {
   useEffect(() => {
     fetchProducts();
     fetchSuppliers();
+    fetchCustomers();
   }, []);
 
   useEffect(() => {
-    fetchReportData(filterType, selectedProduct, selectedSupplier, startDate, endDate);
-  }, [filterType, selectedProduct, selectedSupplier, startDate, endDate]);
+    if (activeTab === 'dashboard') {
+      fetchDashboardSummary();
+    } else if (activeTab === 'sales') {
+      if (salesSubTab === 'summary') {
+        fetchSalesSummary();
+      } else if (salesSubTab === 'by-product') {
+        fetchSalesByProduct();
+      }
+    } else if (activeTab === 'profit') {
+      fetchProfit();
+    } else if (activeTab === 'customers') {
+      if (customerSubTab === 'due-list') {
+        fetchCustomerDueList();
+      } else if (customerSubTab === 'history') {
+        if (selectedCustomer) {
+          fetchCustomerStatement();
+        } else {
+          setCustomerStatement(null);
+        }
+      }
+    } else if (activeTab === 'suppliers') {
+      if (supplierSubTab === 'payables') {
+        fetchSupplierPayables();
+      } else if (supplierSubTab === 'history') {
+        if (selectedSupplierForHistory) {
+          fetchSupplierHistory();
+        } else {
+          setSupplierHistory(null);
+        }
+      }
+    } else if (activeTab === 'expenses') {
+      if (expenseSubTab === 'summary') {
+        fetchExpensesSummary();
+      } else if (expenseSubTab === 'list') {
+        fetchExpensesList();
+      }
+    } else if (activeTab === 'stock-low') {
+      fetchLowStock();
+    }
+  }, [activeTab, salesSubTab, customerSubTab, supplierSubTab, expenseSubTab, filterType, startDate, endDate, selectedProduct, selectedCustomer, selectedSupplierForHistory]);
 
   const updateDateRange = () => {
     const today = new Date();
@@ -86,112 +195,211 @@ const Reports = () => {
   const fetchProducts = async () => {
     try {
       const response = await reportsAPI.getProducts();
-      const productsData = Array.isArray(response.data) ? response.data : [];
-      setProducts(productsData);
+      setProducts(Array.isArray(response.data) ? response.data : []);
     } catch (err) {
       console.error('Error fetching products:', err);
-      setProducts([]); // Set empty array on error
+      setProducts([]);
     }
   };
 
   const fetchSuppliers = async () => {
     try {
       const response = await reportsAPI.getSuppliers();
-      const suppliersData = Array.isArray(response.data) ? response.data : [];
-      setSuppliers(suppliersData);
+      setSuppliers(Array.isArray(response.data) ? response.data : []);
     } catch (err) {
       console.error('Error fetching suppliers:', err);
-      setSuppliers([]); // Set empty array on error
+      setSuppliers([]);
     }
   };
 
-  const fetchReportData = async (period, productId, supplierId, startDate = null, endDate = null) => {
+  const fetchCustomers = async () => {
+    try {
+      const response = await customersAPI.getAll();
+      setCustomers(Array.isArray(response.data) ? response.data : []);
+    } catch (err) {
+      console.error('Error fetching customers:', err);
+      setCustomers([]);
+    }
+  };
+
+  const getFilterParams = () => {
+    const params = { period: filterType };
+    if (filterType === 'custom' && customStartDate && customEndDate) {
+      params.start_date = customStartDate;
+      params.end_date = customEndDate;
+    } else if (startDate && endDate) {
+      params.start_date = startDate;
+      params.end_date = endDate;
+    }
+    return params;
+  };
+
+  const fetchDashboardSummary = async () => {
     try {
       setLoading(true);
       setError(null);
-      const params = {
-        period,
-        product_id: productId || null,
-        supplier_id: supplierId || null,
-      };
-      if (startDate && endDate) {
-        params.start_date = startDate;
-        params.end_date = endDate;
-      }
-      const response = await reportsAPI.getComprehensive(
-        period,
-        productId || null,
-        supplierId || null,
-        startDate,
-        endDate
-      );
-      setReportData(response.data);
+      const response = await reportsAPI.getDashboardSummary(getFilterParams());
+      setDashboardData(response.data);
     } catch (err) {
-      console.error('Error fetching report:', err);
-      setError(err.response?.data?.error || 'Failed to load report');
+      console.error('Error fetching dashboard summary:', err);
+      setError(err.response?.data?.error || 'Failed to load dashboard');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleExportCSV = () => {
-    if (!reportData) return;
+  const fetchSalesSummary = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const params = { ...getFilterParams() };
+      if (selectedProduct) params.product_id = selectedProduct;
+      const response = await reportsAPI.getSalesSummary(params);
+      setSalesSummary(response.data);
+    } catch (err) {
+      console.error('Error fetching sales summary:', err);
+      setError(err.response?.data?.error || 'Failed to load sales summary');
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    // Prepare CSV data
-    let csvContent = 'HisaabKitab Report\n';
-    const filterLabels = {
-      daily: 'Daily',
-      weekly: 'Weekly',
-      monthly: 'Monthly',
-      last3months: 'Last 3 Months',
-      last6months: 'Last 6 Months',
-      thisyear: 'This Year',
-      lastyear: 'Last Year',
-      custom: 'Custom Range'
-    };
-    csvContent += `Period: ${filterLabels[filterType] || 'Monthly'}\n`;
-    csvContent += `Date Range: ${formatDate(reportData.dateRange.start)} - ${formatDate(reportData.dateRange.end)}\n\n`;
+  const fetchSalesByProduct = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const params = { ...getFilterParams() };
+      if (selectedProduct) params.product_id = selectedProduct;
+      const response = await reportsAPI.getSalesByProduct(params);
+      setSalesByProduct(response.data);
+    } catch (err) {
+      console.error('Error fetching sales by product:', err);
+      setError(err.response?.data?.error || 'Failed to load sales by product');
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    // Totals
-    csvContent += 'TOTALS\n';
-    csvContent += `Total Sales,${formatCurrency(reportData.totals.totalSales)}\n`;
-    csvContent += `Total Profit,${formatCurrency(reportData.totals.totalProfit)}\n`;
-    csvContent += `Total Loss,${formatCurrency(reportData.totals.totalLoss)}\n`;
-    csvContent += `Net Profit,${formatCurrency(reportData.totals.netProfit)}\n`;
-    csvContent += `Total Purchases,${formatCurrency(reportData.totals.totalPurchases)}\n\n`;
+  const fetchProfit = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await reportsAPI.getProfit(getFilterParams());
+      setProfitData(response.data);
+    } catch (err) {
+      console.error('Error fetching profit report:', err);
+      setError(err.response?.data?.error || 'Failed to load profit report');
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    // Sales
-    csvContent += 'SALES\n';
-    csvContent += 'Date,Invoice #,Customer,Total Amount,Profit/Loss\n';
-    reportData.sales.forEach(sale => {
-      csvContent += `${formatDate(sale.date)},${sale.invoice_number},${sale.customer_name || ''},${formatCurrency(sale.total_amount)},${formatCurrency(sale.total_profit)}\n`;
-    });
+  const fetchCustomerDueList = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      // Don't apply date filters - show all customers with due amounts
+      const params = { balance_greater_than_zero: 'true' };
+      const response = await reportsAPI.getCustomersDue(params);
+      setCustomerDueList(response.data);
+    } catch (err) {
+      console.error('Error fetching customer due list:', err);
+      setError(err.response?.data?.error || 'Failed to load customer due list');
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    // Purchases
-    csvContent += '\nPURCHASES\n';
-    csvContent += 'Date,Product,Supplier,Quantity,Price,Total\n';
-    reportData.purchases.forEach(purchase => {
-      csvContent += `${formatDate(purchase.date)},${purchase.product_name},${purchase.supplier_name || ''},${purchase.quantity},${formatCurrency(purchase.purchase_price)},${formatCurrency(purchase.total_amount)}\n`;
-    });
+  const fetchCustomerStatement = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      // Don't apply date filters to history - show all transactions to match current_balance
+      const response = await reportsAPI.getCustomerStatement(selectedCustomer, {});
+      setCustomerStatement(response.data);
+    } catch (err) {
+      console.error('Error fetching customer statement:', err);
+      setError(err.response?.data?.error || 'Failed to load customer statement');
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    // Create download
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', `report_${filterType}_${new Date().toISOString().split('T')[0]}.csv`);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  const fetchSupplierPayables = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      // Don't apply date filters - show all suppliers with payable amounts (like customer due list)
+      const params = { balance_only: 'true' };
+      const response = await reportsAPI.getSuppliersPayable(params);
+      setSupplierPayables(response.data);
+    } catch (err) {
+      console.error('Error fetching supplier payables:', err);
+      setError(err.response?.data?.error || 'Failed to load supplier payables');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchSupplierHistory = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      // Don't apply date filters to history - show all transactions to match current_payable_balance
+      const response = await reportsAPI.getSupplierHistory(selectedSupplierForHistory, {});
+      setSupplierHistory(response.data);
+    } catch (err) {
+      console.error('Error fetching supplier history:', err);
+      setError(err.response?.data?.error || 'Failed to load supplier history');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchExpensesSummary = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await reportsAPI.getExpensesSummary(getFilterParams());
+      setExpensesSummary(response.data);
+    } catch (err) {
+      console.error('Error fetching expenses summary:', err);
+      setError(err.response?.data?.error || 'Failed to load expenses summary');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchExpensesList = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await reportsAPI.getExpensesList(getFilterParams());
+      setExpensesList(response.data);
+    } catch (err) {
+      console.error('Error fetching expenses list:', err);
+      setError(err.response?.data?.error || 'Failed to load expenses list');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchLowStock = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await reportsAPI.getStockLow({ min_quantity: 5 });
+      setLowStock(response.data);
+    } catch (err) {
+      console.error('Error fetching low stock:', err);
+      setError(err.response?.data?.error || 'Failed to load low stock');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const formatCurrency = (amount) => {
-    return Number(amount).toFixed(2);
-  };
-
-  const formatCurrencyDisplay = (amount) => {
-    return `PKR ${Number(amount).toFixed(2)}`;
+    return `PKR ${Number(amount || 0).toFixed(2)}`;
   };
 
   const formatDate = (dateString) => {
@@ -203,53 +411,1011 @@ const Reports = () => {
     });
   };
 
-  const getProfitColor = (profit) => {
-    const profitValue = parseFloat(profit);
-    if (profitValue > 0) return 'profit-positive';
-    if (profitValue < 0) return 'profit-negative';
-    return '';
-  };
-
-  // Combine sales and purchases for pagination
-  const combinedReportData = useMemo(() => {
-    if (!reportData) return [];
-    const sales = Array.isArray(reportData.sales) ? reportData.sales.map(s => ({ ...s, type: 'sale' })) : [];
-    const purchases = Array.isArray(reportData.purchases) ? reportData.purchases.map(p => ({ ...p, type: 'purchase' })) : [];
-    return [...sales, ...purchases].sort((a, b) => new Date(b.date) - new Date(a.date));
-  }, [reportData]);
-
-  // Pagination logic
-  const totalPages = Math.ceil(combinedReportData.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const paginatedReportData = combinedReportData.slice(startIndex, endIndex);
-
-  // Reset to page 1 when filters change
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [filterType, selectedProduct, selectedSupplier, startDate, endDate]);
-
   const handleClearFilters = () => {
     setSelectedProduct('');
     setSelectedSupplier('');
+    setSelectedCustomer('');
+    setSelectedSupplierForHistory('');
     setFilterType('monthly');
     setCustomStartDate('');
     setCustomEndDate('');
+    // Clear search states
+    setCustomerDueSearch('');
+    setSupplierPayablesSearch('');
+    setCustomerHistorySearch('');
+    setSupplierHistorySearch('');
+    setShowCustomerHistoryDropdown(false);
+    setShowSupplierHistoryDropdown(false);
+    // Clear report data states
+    setCustomerStatement(null);
+    setSupplierHistory(null);
+    // Reset sub-tabs
+    setSalesSubTab('summary');
+    setCustomerSubTab('due-list');
+    setSupplierSubTab('payables');
+    setExpenseSubTab('summary');
+    // Force date range update
+    const today = new Date();
+    const start = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
+    const end = today.toISOString().split('T')[0];
+    setStartDate(start);
+    setEndDate(end);
   };
 
-  if (loading && !reportData) {
+  const handleCardClick = (reportType) => {
+    setActiveTab(reportType);
+  };
+
+  // Render Dashboard
+  const renderDashboard = () => {
+    if (loading && !dashboardData) {
+      return <div className="loading">Loading dashboard...</div>;
+    }
+
+    if (!dashboardData) return null;
+
     return (
-      <div className="content-container">
-        <div className="loading">Loading reports...</div>
+      <div className="reports-dashboard">
+        <div className="dashboard-cards">
+          <div className="dashboard-card" onClick={() => { setActiveTab('sales'); setSalesSubTab('summary'); }}>
+            <div className="card-icon">💰</div>
+            <div className="card-label">Total Sales</div>
+            <div className="card-value">{formatCurrency(dashboardData.totalSales)}</div>
+          </div>
+          
+          <div className="dashboard-card" onClick={() => handleCardClick('profit')}>
+            <div className="card-icon">📊</div>
+            <div className="card-label">Total Purchases</div>
+            <div className="card-value">{formatCurrency(dashboardData.totalPurchases)}</div>
+          </div>
+          
+          <div className="dashboard-card" onClick={() => { setActiveTab('expenses'); setExpenseSubTab('summary'); }}>
+            <div className="card-icon">💸</div>
+            <div className="card-label">Total Expenses</div>
+            <div className="card-value">{formatCurrency(dashboardData.totalExpenses)}</div>
+          </div>
+          
+          <div className="dashboard-card highlight" onClick={() => handleCardClick('profit')}>
+            <div className="card-icon">✅</div>
+            <div className="card-label">Net Profit</div>
+            <div className={`card-value ${dashboardData.netProfit >= 0 ? 'profit-positive' : 'profit-negative'}`}>
+              {formatCurrency(dashboardData.netProfit)}
+            </div>
+          </div>
+          
+          <div className="dashboard-card" onClick={() => { setActiveTab('sales'); setSalesSubTab('summary'); }}>
+            <div className="card-icon">💵</div>
+            <div className="card-label">Cash Received</div>
+            <div className="card-value">{formatCurrency(dashboardData.cashReceived)}</div>
+          </div>
+          
+          <div className="dashboard-card" onClick={() => { setActiveTab('customers'); setCustomerSubTab('due-list'); }}>
+            <div className="card-icon">📝</div>
+            <div className="card-label">Credit Given (Udhaar)</div>
+            <div className="card-value">{formatCurrency(dashboardData.creditGiven)}</div>
+          </div>
+        </div>
       </div>
     );
-  }
+  };
+
+  // Render Sales (Combined Summary and By Product)
+  const renderSales = () => {
+    return (
+      <div className="report-content">
+        {/* Sub-tabs for Sales */}
+        <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', borderBottom: '2px solid #e0e0e0' }}>
+          <button
+            className={`tab ${salesSubTab === 'summary' ? 'active' : ''}`}
+            onClick={() => setSalesSubTab('summary')}
+            style={{ borderBottom: 'none', borderRadius: '6px 6px 0 0' }}
+          >
+            Sales Summary
+          </button>
+          <button
+            className={`tab ${salesSubTab === 'by-product' ? 'active' : ''}`}
+            onClick={() => setSalesSubTab('by-product')}
+            style={{ borderBottom: 'none', borderRadius: '6px 6px 0 0' }}
+          >
+            Sales by Product
+          </button>
+        </div>
+
+        {/* Product Filter - Only show in Sales tab */}
+        <div style={{ marginBottom: '20px' }}>
+          <div className="form-group">
+            <label className="form-label">Filter by Product</label>
+            <select
+              className="form-input"
+              value={selectedProduct}
+              onChange={(e) => setSelectedProduct(e.target.value)}
+            >
+              <option value="">All Products</option>
+              {products.map(product => (
+                <option key={product.product_id} value={product.product_id}>
+                  {product.name || product.item_name_english}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {/* Render based on sub-tab */}
+        {salesSubTab === 'summary' && renderSalesSummary()}
+        {salesSubTab === 'by-product' && renderSalesByProduct()}
+      </div>
+    );
+  };
+
+  // Render Sales Summary
+  const renderSalesSummary = () => {
+    if (loading && !salesSummary) {
+      return <div className="loading">Loading sales summary...</div>;
+    }
+
+    if (!salesSummary) return null;
+
+    return (
+      <div>
+        <div className="report-totals">
+          <div className="total-card">
+            <div className="total-label">Total Sales Amount</div>
+            <div className="total-value">{formatCurrency(salesSummary.totalSales)}</div>
+          </div>
+          <div className="total-card">
+            <div className="total-label">Number of Invoices</div>
+            <div className="total-value">{salesSummary.invoiceCount}</div>
+          </div>
+          <div className="total-card">
+            <div className="total-label">Cash Sales</div>
+            <div className="total-value profit-positive">{formatCurrency(salesSummary.cashSales)}</div>
+          </div>
+          <div className="total-card">
+            <div className="total-label">Credit Sales</div>
+            <div className="total-value">{formatCurrency(salesSummary.creditSales)}</div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Render Sales by Product
+  const renderSalesByProduct = () => {
+    if (loading && !salesByProduct) {
+      return <div className="loading">Loading sales by product...</div>;
+    }
+
+    if (!salesByProduct || !salesByProduct.products) return null;
+
+    return (
+      <div>
+        <div className="table-container">
+          <table className="reports-table">
+            <thead>
+              <tr>
+                <th>Product Name</th>
+                <th>Quantity Sold</th>
+                <th>Total Sale Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              {salesByProduct.products.length === 0 ? (
+                <tr>
+                  <td colSpan="3" className="empty-state">No sales found for this period.</td>
+                </tr>
+              ) : (
+                salesByProduct.products.map((product) => (
+                  <tr key={product.product_id}>
+                    <td>{product.product_name}</td>
+                    <td>{product.quantity_sold}</td>
+                    <td>{formatCurrency(product.total_sale_amount)}</td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
+  };
+
+  // Render Profit Report
+  const renderProfit = () => {
+    if (loading && !profitData) {
+      return <div className="loading">Loading profit report...</div>;
+    }
+
+    if (!profitData) return null;
+
+    return (
+      <div className="report-content">
+        <div className="report-totals">
+          <div className="total-card">
+            <div className="total-label">Total Sales</div>
+            <div className="total-value">{formatCurrency(profitData.totalSales)}</div>
+          </div>
+          <div className="total-card">
+            <div className="total-label">Total Purchases</div>
+            <div className="total-value profit-negative">{formatCurrency(profitData.totalPurchases)}</div>
+          </div>
+          <div className="total-card">
+            <div className="total-label">Total Expenses</div>
+            <div className="total-value profit-negative">{formatCurrency(profitData.totalExpenses)}</div>
+          </div>
+          <div className="total-card highlight">
+            <div className="total-label">Net Profit</div>
+            <div className={`total-value ${profitData.netProfit >= 0 ? 'profit-positive' : 'profit-negative'}`}>
+              {formatCurrency(profitData.netProfit)}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Render Customers (Combined Due List and History)
+  const renderCustomers = () => {
+    return (
+      <div className="report-content">
+        {/* Sub-tabs for Customers */}
+        <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', borderBottom: '2px solid #e0e0e0' }}>
+          <button
+            className={`tab ${customerSubTab === 'due-list' ? 'active' : ''}`}
+            onClick={() => { setCustomerSubTab('due-list'); setSelectedCustomer(''); setCustomerStatement(null); }}
+            style={{ borderBottom: 'none', borderRadius: '6px 6px 0 0' }}
+          >
+            Due List
+          </button>
+          <button
+            className={`tab ${customerSubTab === 'history' ? 'active' : ''}`}
+            onClick={() => { setCustomerSubTab('history'); }}
+            style={{ borderBottom: 'none', borderRadius: '6px 6px 0 0' }}
+          >
+            History
+          </button>
+        </div>
+
+        {/* Render based on sub-tab */}
+        {customerSubTab === 'due-list' && renderCustomerDueList()}
+        {customerSubTab === 'history' && renderCustomerStatement()}
+      </div>
+    );
+  };
+
+  // Render Customer Due List
+  const renderCustomerDueList = () => {
+    if (loading && !customerDueList) {
+      return <div className="loading">Loading customer due list...</div>;
+    }
+
+    if (!customerDueList || !customerDueList.customers) return null;
+
+    // Filter customers based on search
+    const filteredCustomers = customerDueList.customers.filter(customer => {
+      if (!customerDueSearch.trim()) return true;
+      const search = customerDueSearch.toLowerCase();
+      const name = (customer.customer_name || '').toLowerCase();
+      const phone = (customer.mobile_number || '').toLowerCase();
+      return name.includes(search) || phone.includes(search);
+    });
+
+    return (
+      <div className="report-content">
+        <div className="report-totals">
+          <div className="total-card highlight">
+            <div className="total-label">Total Customers with Due</div>
+            <div className="total-value">{filteredCustomers.length}</div>
+          </div>
+          <div className="total-card highlight">
+            <div className="total-label">Total Remaining Due</div>
+            <div className="total-value profit-negative">{formatCurrency(customerDueList.total_due)}</div>
+          </div>
+        </div>
+        <div style={{ marginBottom: '16px' }}>
+          <div className="form-group">
+            <label className="form-label">Search Customer (Name or Mobile)</label>
+            <input
+              type="text"
+              className="form-input"
+              placeholder="Type to search customers..."
+              value={customerDueSearch}
+              onChange={(e) => setCustomerDueSearch(e.target.value)}
+            />
+          </div>
+        </div>
+        <div className="table-container">
+          <table className="reports-table">
+            <thead>
+              <tr>
+                <th>Customer Name</th>
+                <th>Mobile Number</th>
+                <th>Remaining Due</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredCustomers.length === 0 ? (
+                <tr>
+                  <td colSpan="4" className="empty-state">
+                    {customerDueSearch ? 'No customers found matching your search.' : 'No customers with due amounts.'}
+                  </td>
+                </tr>
+              ) : (
+                filteredCustomers.map((customer) => (
+                  <tr key={customer.customer_id}>
+                    <td>{customer.customer_name}</td>
+                    <td>{customer.mobile_number || '-'}</td>
+                    <td className="profit-negative">{formatCurrency(customer.total_due)}</td>
+                    <td>
+                      <button 
+                        className="btn btn-sm btn-primary"
+                        onClick={() => {
+                          setSelectedCustomer(customer.customer_id);
+                          setCustomerSubTab('history');
+                        }}
+                      >
+                        View History
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
+  };
+
+  // Render Customer Statement
+  const renderCustomerStatement = () => {
+    if (loading && !customerStatement) {
+      return <div className="loading">Loading customer statement...</div>;
+    }
+
+    if (!customerStatement) {
+      // Filter customers based on search
+      const filteredCustomers = customers.filter(customer => {
+        if (!customerHistorySearch.trim()) return true;
+        const search = customerHistorySearch.toLowerCase();
+        const name = (customer.name || '').toLowerCase();
+        const phone = (customer.phone || '').toLowerCase();
+        return name.includes(search) || phone.includes(search);
+      });
+
+      // Get selected customer name for display
+      const selectedCustomerData = customers.find(c => c.customer_id === parseInt(selectedCustomer));
+      const displayValue = selectedCustomerData 
+        ? `${selectedCustomerData.name} ${selectedCustomerData.current_due > 0 ? `- ${formatCurrency(selectedCustomerData.current_due)}` : ''}`
+        : customerHistorySearch;
+
+      return (
+        <div className="report-content">
+          <div className="form-group" style={{ position: 'relative' }} ref={customerHistoryDropdownRef}>
+            <label className="form-label">Select Customer</label>
+            <input
+              type="text"
+              className="form-input"
+              placeholder="Type to search customers..."
+              value={selectedCustomer ? displayValue : customerHistorySearch}
+              onChange={(e) => {
+                setCustomerHistorySearch(e.target.value);
+                setSelectedCustomer('');
+                setShowCustomerHistoryDropdown(true);
+              }}
+              onFocus={() => setShowCustomerHistoryDropdown(true)}
+            />
+            {showCustomerHistoryDropdown && filteredCustomers.length > 0 && (
+              <div 
+                style={{
+                  position: 'absolute',
+                  top: '100%',
+                  left: 0,
+                  right: 0,
+                  backgroundColor: 'white',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '6px',
+                  maxHeight: '300px',
+                  overflowY: 'auto',
+                  zIndex: 1000,
+                  boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+                  marginTop: '4px'
+                }}
+              >
+                {filteredCustomers.map(customer => (
+                  <div
+                    key={customer.customer_id}
+                    style={{
+                      padding: '12px',
+                      cursor: 'pointer',
+                      borderBottom: '1px solid #f3f4f6',
+                      transition: 'background-color 0.2s'
+                    }}
+                    onMouseEnter={(e) => e.target.style.backgroundColor = '#f9fafb'}
+                    onMouseLeave={(e) => e.target.style.backgroundColor = 'white'}
+                    onClick={() => {
+                      setSelectedCustomer(customer.customer_id);
+                      setCustomerHistorySearch('');
+                      setShowCustomerHistoryDropdown(false);
+                    }}
+                  >
+                    <div style={{ fontWeight: 500 }}>{customer.name}</div>
+                    {customer.phone && (
+                      <div style={{ fontSize: '12px', color: '#6b7280' }}>{customer.phone}</div>
+                    )}
+                    {customer.current_due > 0 && (
+                      <div style={{ fontSize: '12px', color: '#dc2626', fontWeight: 600 }}>
+                        Due: {formatCurrency(customer.current_due)}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+            {showCustomerHistoryDropdown && filteredCustomers.length === 0 && customerHistorySearch && (
+              <div 
+                style={{
+                  position: 'absolute',
+                  top: '100%',
+                  left: 0,
+                  right: 0,
+                  backgroundColor: 'white',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '6px',
+                  padding: '12px',
+                  zIndex: 1000,
+                  boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+                  marginTop: '4px'
+                }}
+              >
+                No customers found
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="report-content">
+        <div className="report-header">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+            <h3>{customerStatement.customer.name}</h3>
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button 
+                className="btn btn-secondary"
+                onClick={() => {
+                  setSelectedCustomer('');
+                  setCustomerHistorySearch('');
+                  setCustomerStatement(null);
+                  setShowCustomerHistoryDropdown(false);
+                }}
+              >
+                Change Customer
+              </button>
+              <button 
+                className="btn btn-secondary"
+                onClick={() => {
+                  setCustomerSubTab('due-list');
+                  setSelectedCustomer('');
+                  setCustomerStatement(null);
+                }}
+              >
+                Back to List
+              </button>
+            </div>
+          </div>
+          <div className="report-totals">
+            <div className="total-card">
+              <div className="total-label">Total Sales</div>
+              <div className="total-value">{formatCurrency(customerStatement.total_sales)}</div>
+            </div>
+            <div className="total-card">
+              <div className="total-label">Total Payments</div>
+              <div className="total-value profit-positive">{formatCurrency(customerStatement.total_payments)}</div>
+            </div>
+            <div className="total-card highlight">
+              <div className="total-label">Remaining Balance</div>
+              <div className="total-value profit-negative">{formatCurrency(customerStatement.remaining_balance)}</div>
+            </div>
+          </div>
+        </div>
+        <div className="table-container">
+          <table className="reports-table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Description</th>
+                <th>Amount</th>
+                <th>Balance</th>
+              </tr>
+            </thead>
+            <tbody>
+              {customerStatement.statement.length === 0 ? (
+                <tr>
+                  <td colSpan="4" className="empty-state">No transactions found.</td>
+                </tr>
+              ) : (
+                customerStatement.statement.map((item, index) => (
+                  <tr key={index}>
+                    <td>{formatDate(item.date)}</td>
+                    <td>{item.description}</td>
+                    <td className={item.amount >= 0 ? 'profit-negative' : 'profit-positive'}>
+                      {formatCurrency(Math.abs(item.amount))}
+                    </td>
+                    <td>{formatCurrency(item.balance)}</td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
+  };
+
+  // Render Suppliers (Combined Payables and History)
+  const renderSuppliers = () => {
+    return (
+      <div className="report-content">
+        {/* Sub-tabs for Suppliers */}
+        <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', borderBottom: '2px solid #e0e0e0' }}>
+          <button
+            className={`tab ${supplierSubTab === 'payables' ? 'active' : ''}`}
+            onClick={() => { setSupplierSubTab('payables'); setSelectedSupplierForHistory(''); setSupplierHistory(null); }}
+            style={{ borderBottom: 'none', borderRadius: '6px 6px 0 0' }}
+          >
+            Payables
+          </button>
+          <button
+            className={`tab ${supplierSubTab === 'history' ? 'active' : ''}`}
+            onClick={() => { setSupplierSubTab('history'); }}
+            style={{ borderBottom: 'none', borderRadius: '6px 6px 0 0' }}
+          >
+            History
+          </button>
+        </div>
+
+        {/* Render based on sub-tab */}
+        {supplierSubTab === 'payables' && renderSupplierPayables()}
+        {supplierSubTab === 'history' && renderSupplierHistory()}
+      </div>
+    );
+  };
+
+  // Render Supplier Payables
+  const renderSupplierPayables = () => {
+    if (loading && !supplierPayables) {
+      return <div className="loading">Loading supplier payables...</div>;
+    }
+
+    if (!supplierPayables || !Array.isArray(supplierPayables)) return null;
+
+    // Filter suppliers based on search
+    const filteredSuppliers = supplierPayables.filter(supplier => {
+      if (!supplierPayablesSearch.trim()) return true;
+      const search = supplierPayablesSearch.toLowerCase();
+      const name = (supplier.name || '').toLowerCase();
+      const contact = (supplier.contact_number || '').toLowerCase();
+      return name.includes(search) || contact.includes(search);
+    });
+
+    // Only sum positive balances (amounts we actually owe)
+    const totalPayable = filteredSuppliers.reduce((sum, s) => {
+      const balance = parseFloat(s.current_payable_balance || 0);
+      return sum + (balance > 0 ? balance : 0);
+    }, 0);
+
+    return (
+      <div className="report-content">
+        <div className="report-totals">
+          <div className="total-card highlight">
+            <div className="total-label">Total Amount to Pay</div>
+            <div className="total-value profit-negative">{formatCurrency(totalPayable)}</div>
+          </div>
+        </div>
+        <div style={{ marginBottom: '16px' }}>
+          <div className="form-group">
+            <label className="form-label">Search Supplier (Name or Contact)</label>
+            <input
+              type="text"
+              className="form-input"
+              placeholder="Type to search suppliers..."
+              value={supplierPayablesSearch}
+              onChange={(e) => setSupplierPayablesSearch(e.target.value)}
+            />
+          </div>
+        </div>
+        <div className="table-container">
+          <table className="reports-table">
+            <thead>
+              <tr>
+                <th>Supplier Name</th>
+                <th>Amount to Pay</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredSuppliers.length === 0 ? (
+                <tr>
+                  <td colSpan="3" className="empty-state">
+                    {supplierPayablesSearch ? 'No suppliers found matching your search.' : 'No suppliers with payable amounts.'}
+                  </td>
+                </tr>
+              ) : (
+                filteredSuppliers.map((supplier) => (
+                  <tr key={supplier.supplier_id}>
+                    <td>{supplier.name}</td>
+                    <td className="profit-negative">{formatCurrency(Math.abs(parseFloat(supplier.current_payable_balance || 0)))}</td>
+                    <td>
+                      <button 
+                        className="btn btn-sm btn-primary"
+                        onClick={() => {
+                          setSelectedSupplierForHistory(supplier.supplier_id);
+                          setSupplierSubTab('history');
+                        }}
+                      >
+                        View History
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
+  };
+
+  // Render Supplier History
+  const renderSupplierHistory = () => {
+    if (loading && !supplierHistory) {
+      return <div className="loading">Loading supplier history...</div>;
+    }
+
+    if (!supplierHistory) {
+      // Filter suppliers based on search
+      const filteredSuppliers = (supplierPayables || []).filter(supplier => {
+        if (!supplierHistorySearch.trim()) return true;
+        const search = supplierHistorySearch.toLowerCase();
+        const name = (supplier.name || '').toLowerCase();
+        const contact = (supplier.contact_number || '').toLowerCase();
+        return name.includes(search) || contact.includes(search);
+      });
+
+      // Get selected supplier name for display
+      const selectedSupplierData = supplierPayables?.find(s => s.supplier_id === parseInt(selectedSupplierForHistory));
+      const displayValue = selectedSupplierData 
+        ? `${selectedSupplierData.name} - ${formatCurrency(Math.abs(parseFloat(selectedSupplierData.current_payable_balance || 0)))}`
+        : supplierHistorySearch;
+
+      return (
+        <div className="report-content">
+          <div className="form-group" style={{ position: 'relative' }} ref={supplierHistoryDropdownRef}>
+            <label className="form-label">Select Supplier</label>
+            <input
+              type="text"
+              className="form-input"
+              placeholder="Type to search suppliers..."
+              value={selectedSupplierForHistory ? displayValue : supplierHistorySearch}
+              onChange={(e) => {
+                setSupplierHistorySearch(e.target.value);
+                setSelectedSupplierForHistory('');
+                setShowSupplierHistoryDropdown(true);
+              }}
+              onFocus={() => setShowSupplierHistoryDropdown(true)}
+            />
+            {showSupplierHistoryDropdown && filteredSuppliers.length > 0 && (
+              <div 
+                style={{
+                  position: 'absolute',
+                  top: '100%',
+                  left: 0,
+                  right: 0,
+                  backgroundColor: 'white',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '6px',
+                  maxHeight: '300px',
+                  overflowY: 'auto',
+                  zIndex: 1000,
+                  boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+                  marginTop: '4px'
+                }}
+              >
+                {filteredSuppliers.map(supplier => (
+                  <div
+                    key={supplier.supplier_id}
+                    style={{
+                      padding: '12px',
+                      cursor: 'pointer',
+                      borderBottom: '1px solid #f3f4f6',
+                      transition: 'background-color 0.2s'
+                    }}
+                    onMouseEnter={(e) => e.target.style.backgroundColor = '#f9fafb'}
+                    onMouseLeave={(e) => e.target.style.backgroundColor = 'white'}
+                    onClick={() => {
+                      setSelectedSupplierForHistory(supplier.supplier_id);
+                      setSupplierHistorySearch('');
+                      setShowSupplierHistoryDropdown(false);
+                    }}
+                  >
+                    <div style={{ fontWeight: 500 }}>{supplier.name}</div>
+                    {supplier.contact_number && (
+                      <div style={{ fontSize: '12px', color: '#6b7280' }}>{supplier.contact_number}</div>
+                    )}
+                    <div style={{ fontSize: '12px', color: '#dc2626', fontWeight: 600 }}>
+                      Payable: {formatCurrency(Math.abs(parseFloat(supplier.current_payable_balance || 0)))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            {showSupplierHistoryDropdown && filteredSuppliers.length === 0 && supplierHistorySearch && (
+              <div 
+                style={{
+                  position: 'absolute',
+                  top: '100%',
+                  left: 0,
+                  right: 0,
+                  backgroundColor: 'white',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '6px',
+                  padding: '12px',
+                  zIndex: 1000,
+                  boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+                  marginTop: '4px'
+                }}
+              >
+                No suppliers found
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="report-content">
+        <div className="report-header">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+            <h3>{supplierHistory.supplier.name}</h3>
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button 
+                className="btn btn-secondary"
+                onClick={() => {
+                  setSelectedSupplierForHistory('');
+                  setSupplierHistorySearch('');
+                  setSupplierHistory(null);
+                  setShowSupplierHistoryDropdown(false);
+                }}
+              >
+                Change Supplier
+              </button>
+              <button 
+                className="btn btn-secondary"
+                onClick={() => {
+                  setSupplierSubTab('payables');
+                  setSelectedSupplierForHistory('');
+                  setSupplierHistory(null);
+                }}
+              >
+                Back to List
+              </button>
+            </div>
+          </div>
+          <div className="report-totals">
+            <div className="total-card">
+              <div className="total-label">Total Purchases</div>
+              <div className="total-value">{formatCurrency(supplierHistory.total_purchases)}</div>
+            </div>
+            <div className="total-card">
+              <div className="total-label">Total Paid</div>
+              <div className="total-value profit-positive">{formatCurrency(supplierHistory.total_paid)}</div>
+            </div>
+            <div className="total-card highlight">
+              <div className="total-label">Remaining Balance</div>
+              <div className="total-value profit-negative">{formatCurrency(Math.abs(parseFloat(supplierHistory.remaining_balance || 0)))}</div>
+            </div>
+          </div>
+        </div>
+        <div className="table-container">
+          <table className="reports-table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Description</th>
+                <th>Amount</th>
+                <th>Balance</th>
+              </tr>
+            </thead>
+            <tbody>
+              {supplierHistory.history.length === 0 ? (
+                <tr>
+                  <td colSpan="4" className="empty-state">No transactions found.</td>
+                </tr>
+              ) : (
+                supplierHistory.history.map((item, index) => (
+                  <tr key={index}>
+                    <td>{formatDate(item.date)}</td>
+                    <td>{item.description}</td>
+                    <td className={item.amount >= 0 ? 'profit-negative' : 'profit-positive'}>
+                      {formatCurrency(Math.abs(item.amount))}
+                    </td>
+                    <td>{formatCurrency(item.balance)}</td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
+  };
+
+  // Render Expenses (Combined Summary and List)
+  const renderExpenses = () => {
+    return (
+      <div className="report-content">
+        {/* Sub-tabs for Expenses */}
+        <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', borderBottom: '2px solid #e0e0e0' }}>
+          <button
+            className={`tab ${expenseSubTab === 'summary' ? 'active' : ''}`}
+            onClick={() => setExpenseSubTab('summary')}
+            style={{ borderBottom: 'none', borderRadius: '6px 6px 0 0' }}
+          >
+            Summary
+          </button>
+          <button
+            className={`tab ${expenseSubTab === 'list' ? 'active' : ''}`}
+            onClick={() => setExpenseSubTab('list')}
+            style={{ borderBottom: 'none', borderRadius: '6px 6px 0 0' }}
+          >
+            List
+          </button>
+        </div>
+
+        {/* Render based on sub-tab */}
+        {expenseSubTab === 'summary' && renderExpensesSummary()}
+        {expenseSubTab === 'list' && renderExpensesList()}
+      </div>
+    );
+  };
+
+  // Render Expenses Summary
+  const renderExpensesSummary = () => {
+    if (loading && !expensesSummary) {
+      return <div className="loading">Loading expenses summary...</div>;
+    }
+
+    if (!expensesSummary) return null;
+
+    return (
+      <div>
+        <div className="report-totals">
+          <div className="total-card highlight">
+            <div className="total-label">Total Expenses</div>
+            <div className="total-value profit-negative">{formatCurrency(expensesSummary.totalExpenses)}</div>
+          </div>
+          <div className="total-card">
+            <div className="total-label">Number of Expenses</div>
+            <div className="total-value">{expensesSummary.expenseCount}</div>
+          </div>
+        </div>
+        {expensesSummary.categoryBreakdown && expensesSummary.categoryBreakdown.length > 0 && (
+          <div className="table-container">
+            <h3>Category Breakdown</h3>
+            <table className="reports-table">
+              <thead>
+                <tr>
+                  <th>Category</th>
+                  <th>Total Amount</th>
+                  <th>Count</th>
+                </tr>
+              </thead>
+              <tbody>
+                {expensesSummary.categoryBreakdown.map((cat, index) => (
+                  <tr key={index}>
+                    <td>{cat.category}</td>
+                    <td>{formatCurrency(cat.total)}</td>
+                    <td>{cat.count}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // Render Expenses List
+  const renderExpensesList = () => {
+    if (loading && !expensesList) {
+      return <div className="loading">Loading expenses list...</div>;
+    }
+
+    if (!expensesList || !expensesList.expenses) return null;
+
+    return (
+      <div>
+        <div className="table-container">
+          <table className="reports-table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Expense Name</th>
+                <th>Category</th>
+                <th>Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              {expensesList.expenses.length === 0 ? (
+                <tr>
+                  <td colSpan="4" className="empty-state">No expenses found for this period.</td>
+                </tr>
+              ) : (
+                expensesList.expenses.map((expense) => (
+                  <tr key={expense.expense_id}>
+                    <td>{formatDate(expense.date)}</td>
+                    <td>{expense.expense_name}</td>
+                    <td>{expense.category}</td>
+                    <td className="profit-negative">{formatCurrency(expense.amount)}</td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
+  };
+
+  // Render Low Stock
+  const renderLowStock = () => {
+    if (loading && !lowStock) {
+      return <div className="loading">Loading low stock...</div>;
+    }
+
+    if (!lowStock || !lowStock.products) return null;
+
+    return (
+      <div className="report-content">
+        <div className="table-container">
+          <table className="reports-table">
+            <thead>
+              <tr>
+                <th>Product Name</th>
+                <th>Current Qty</th>
+                <th>Minimum Qty</th>
+              </tr>
+            </thead>
+            <tbody>
+              {lowStock.products.length === 0 ? (
+                <tr>
+                  <td colSpan="3" className="empty-state">No low stock items found.</td>
+                </tr>
+              ) : (
+                lowStock.products.map((product) => (
+                  <tr key={product.product_id} className={product.current_qty <= 0 ? 'row-warning' : ''}>
+                    <td>{product.product_name}</td>
+                    <td className={product.current_qty <= 0 ? 'profit-negative' : ''}>{product.current_qty}</td>
+                    <td>{product.minimum_qty}</td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="content-container">
       <div className="page-header">
         <h1 className="page-title">Reports</h1>
-        <p className="page-subtitle">View sales, profit/loss, purchases, and cash flow</p>
+        <p className="page-subtitle">View your business reports and summaries</p>
       </div>
 
       {error && (
@@ -258,7 +1424,7 @@ const Reports = () => {
         </div>
       )}
 
-      {/* Date Filter Section */}
+      {/* Date Filter Section - KEEP EXACTLY AS IS */}
       <div className="card" style={{ marginBottom: '20px' }}>
         <div className="card-header">
           <h2>Filter Reports</h2>
@@ -371,170 +1537,72 @@ const Reports = () => {
             </div>
           )}
           
-          {/* Product and Supplier Filters */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
-            <div className="form-group">
-              <label className="form-label">Filter by Product</label>
-              <select
-                className="form-input"
-                value={selectedProduct}
-                onChange={(e) => setSelectedProduct(e.target.value)}
-              >
-                <option value="">All Products</option>
-                {(Array.isArray(products) ? products : []).map(product => (
-                  <option key={product.product_id} value={product.product_id}>
-                    {product.name || product.item_name_english}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="form-group">
-              <label className="form-label">Filter by Supplier</label>
-              <select
-                className="form-input"
-                value={selectedSupplier}
-                onChange={(e) => setSelectedSupplier(e.target.value)}
-              >
-                <option value="">All Suppliers</option>
-                {(Array.isArray(suppliers) ? suppliers : []).map(supplier => (
-                  <option key={supplier.supplier_id} value={supplier.supplier_id}>
-                    {supplier.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-          
           <div style={{ display: 'flex', gap: '12px' }}>
             <button className="btn btn-secondary" onClick={handleClearFilters}>
               Clear Filters
-            </button>
-            <button className="btn btn-primary" onClick={handleExportCSV}>
-              📥 Export to CSV
             </button>
           </div>
         </div>
       </div>
 
-      {/* Totals */}
-      {reportData && (
-        <div className="totals-container">
-          <div className="total-card">
-            <div className="total-label">Total Sales</div>
-            <div className="total-value">{formatCurrencyDisplay(reportData.totals.totalSales)}</div>
-          </div>
-          <div className="total-card">
-            <div className="total-label">Total Profit</div>
-            <div className={`total-value profit-positive`}>
-              {formatCurrencyDisplay(reportData.totals.totalProfit)}
-            </div>
-          </div>
-          <div className="total-card">
-            <div className="total-label">Total Loss</div>
-            <div className={`total-value profit-negative`}>
-              {formatCurrencyDisplay(reportData.totals.totalLoss)}
-            </div>
-          </div>
-          <div className="total-card">
-            <div className="total-label">Net Profit/Loss</div>
-            <div className={`total-value ${getProfitColor(reportData.totals.netProfit)}`}>
-              {formatCurrencyDisplay(reportData.totals.netProfit)}
-            </div>
-          </div>
-          <div className="total-card">
-            <div className="total-label">Total Purchases</div>
-            <div className="total-value">{formatCurrencyDisplay(reportData.totals.totalPurchases)}</div>
-          </div>
-        </div>
-      )}
+      {/* Tabs */}
+      <div className="tabs-container">
+        <button 
+          className={`tab ${activeTab === 'dashboard' ? 'active' : ''}`}
+          onClick={() => setActiveTab('dashboard')}
+        >
+          Dashboard
+        </button>
+        <button 
+          className={`tab ${activeTab === 'sales' ? 'active' : ''}`}
+          onClick={() => { setActiveTab('sales'); setSalesSubTab('summary'); }}
+        >
+          Sales
+        </button>
+        <button 
+          className={`tab ${activeTab === 'profit' ? 'active' : ''}`}
+          onClick={() => setActiveTab('profit')}
+        >
+          Profit Report
+        </button>
+        <button 
+          className={`tab ${activeTab === 'customers' ? 'active' : ''}`}
+          onClick={() => { setActiveTab('customers'); setCustomerSubTab('due-list'); }}
+        >
+          Customers
+        </button>
+        <button 
+          className={`tab ${activeTab === 'suppliers' ? 'active' : ''}`}
+          onClick={() => { setActiveTab('suppliers'); setSupplierSubTab('payables'); }}
+        >
+          Suppliers
+        </button>
+        <button 
+          className={`tab ${activeTab === 'expenses' ? 'active' : ''}`}
+          onClick={() => { setActiveTab('expenses'); setExpenseSubTab('summary'); }}
+        >
+          Expenses
+        </button>
+        <button 
+          className={`tab ${activeTab === 'stock-low' ? 'active' : ''}`}
+          onClick={() => setActiveTab('stock-low')}
+        >
+          Low Stock
+        </button>
+      </div>
 
-      {/* Report Table */}
-      {reportData && (
-        <div className="card">
-          <div className="card-header">
-            <h2>Sales & Purchases Report</h2>
-            {reportData.dateRange.start && (
-              <div className="date-range">
-                {formatDate(reportData.dateRange.start)} - {formatDate(reportData.dateRange.end)}
-              </div>
-            )}
-          </div>
-
-          <div className="table-container">
-            <table className="reports-table">
-              <thead>
-                <tr>
-                  <th>Date</th>
-                  <th>Type</th>
-                  <th>Invoice/Ref</th>
-                  <th>Customer/Supplier</th>
-                  <th>Product</th>
-                  <th>Quantity</th>
-                  <th>Amount</th>
-                  <th>Profit/Loss</th>
-                </tr>
-              </thead>
-              <tbody>
-                {paginatedReportData.length === 0 ? (
-                  <tr>
-                    <td colSpan="8" className="empty-state">
-                      No data found for this period.
-                    </td>
-                  </tr>
-                ) : (
-                  paginatedReportData.map((item) => {
-                    if (item.type === 'sale') {
-                      return (
-                        <tr key={`sale-${item.sale_id}`} className="row-sale">
-                          <td>{formatDate(item.date)}</td>
-                          <td><span className="badge badge-sale">Sale</span></td>
-                          <td>{item.invoice_number}</td>
-                          <td>{item.customer_name || '-'}</td>
-                          <td>-</td>
-                          <td>-</td>
-                          <td>{formatCurrencyDisplay(item.total_amount)}</td>
-                          <td className={getProfitColor(item.total_profit)}>
-                            {formatCurrencyDisplay(item.total_profit)}
-                          </td>
-                        </tr>
-                      );
-                    } else {
-                      return (
-                        <tr key={`purchase-${item.purchase_id}`} className="row-purchase">
-                          <td>{formatDate(item.date)}</td>
-                          <td><span className="badge badge-purchase">Purchase</span></td>
-                          <td>PUR-{item.purchase_id}</td>
-                          <td>{item.supplier_name || '-'}</td>
-                          <td>{item.product_name}</td>
-                          <td>{item.quantity}</td>
-                          <td>{formatCurrencyDisplay(item.total_amount)}</td>
-                          <td className="profit-negative">
-                            -{formatCurrencyDisplay(item.total_amount)}
-                          </td>
-                        </tr>
-                      );
-                    }
-                  })
-                )}
-              </tbody>
-            </table>
-          </div>
-          
-          {combinedReportData.length > 0 && (
-            <Pagination
-              currentPage={currentPage}
-              totalPages={totalPages}
-              itemsPerPage={itemsPerPage}
-              totalItems={combinedReportData.length}
-              onPageChange={setCurrentPage}
-              onItemsPerPageChange={(newItemsPerPage) => {
-                setItemsPerPage(newItemsPerPage);
-                setCurrentPage(1);
-              }}
-            />
-          )}
+      {/* Report Content */}
+      <div className="card">
+        <div className="card-content">
+          {activeTab === 'dashboard' && renderDashboard()}
+          {activeTab === 'sales' && renderSales()}
+          {activeTab === 'profit' && renderProfit()}
+          {activeTab === 'customers' && renderCustomers()}
+          {activeTab === 'suppliers' && renderSuppliers()}
+          {activeTab === 'expenses' && renderExpenses()}
+          {activeTab === 'stock-low' && renderLowStock()}
         </div>
-      )}
+      </div>
     </div>
   );
 };

@@ -42,12 +42,20 @@ router.get('/', async (req, res) => {
         date,
         customer_name,
         total_amount,
+        paid_amount,
+        payment_type,
         total_profit
       FROM sales
       ORDER BY sale_id DESC
       LIMIT 100`
     );
-    res.json(result.rows);
+    // Map payment_type to payment_mode for frontend consistency
+    const salesWithPaymentMode = result.rows.map(sale => ({
+      ...sale,
+      payment_mode: sale.payment_type || 'cash'
+    }));
+    
+    res.json(salesWithPaymentMode);
   } catch (error) {
     console.error('Error fetching sales:', error);
     res.status(500).json({ error: 'Failed to fetch sales', message: error.message });
@@ -66,7 +74,13 @@ router.get('/:id', async (req, res) => {
           invoice_number,
           date,
           customer_name,
+          customer_id,
+          subtotal,
+          discount,
+          tax,
           total_amount,
+          paid_amount,
+          payment_type,
           total_profit
         FROM sales
         WHERE sale_id = $1`,
@@ -82,6 +96,7 @@ router.get('/:id', async (req, res) => {
           si.purchase_price,
           si.profit,
           p.name as product_name,
+          p.item_name_english,
           p.sku
         FROM sale_items si
         JOIN products p ON si.product_id = p.product_id
@@ -94,9 +109,20 @@ router.get('/:id', async (req, res) => {
       return res.status(404).json({ error: 'Sale not found' });
     }
 
+    const sale = saleResult.rows[0];
+    // Map payment_type to payment_mode for frontend consistency
+    sale.payment_mode = sale.payment_type || 'cash';
+    
+    // Use item_name_english if available, otherwise use product_name
+    const items = itemsResult.rows.map(item => ({
+      ...item,
+      product_name: item.item_name_english || item.product_name || 'N/A',
+      name: item.item_name_english || item.product_name || 'N/A'
+    }));
+    
     res.json({
-      ...saleResult.rows[0],
-      items: itemsResult.rows
+      ...sale,
+      items: items
     });
   } catch (error) {
     console.error('Error fetching sale:', error);
@@ -163,10 +189,13 @@ router.post('/', async (req, res) => {
 
       const product = productResult.rows[0];
       
+      // Allow selling even if stock is low/zero (warning only, don't block)
+      // Stock can go negative for hardware shops (items sold before restocking)
       if (product.quantity_in_stock < quantity) {
-        throw new Error(
-          `Insufficient stock for product. Available: ${product.quantity_in_stock}, Requested: ${quantity}`
+        console.warn(
+          `Low stock warning: Product ${product_id} - Available: ${product.quantity_in_stock}, Requested: ${quantity}`
         );
+        // Continue processing - don't throw error
       }
 
       const purchasePrice = parseFloat(product.purchase_price);
@@ -182,15 +211,33 @@ router.post('/', async (req, res) => {
     const taxAmount = parseFloat(tax) || 0;
     const subtotal = subtotalAmount;
     const grandTotal = subtotal - discountAmount + taxAmount;
-    const paidAmount = parseFloat(paid_amount) || (payment_type === 'cash' ? grandTotal : 0);
-    const paymentType = payment_type || 'cash';
+    // Use payment_mode from request if provided, otherwise use payment_type, default to 'cash'
+    const paymentType = req.body.payment_mode || payment_type || 'cash';
+    
+    // Determine paid amount based on payment type
+    let paidAmount = 0;
+    if (paymentType === 'cash') {
+      paidAmount = grandTotal;
+    } else if (paymentType === 'credit') {
+      paidAmount = 0;
+    } else if (paymentType === 'split') {
+      paidAmount = parseFloat(paid_amount) || 0;
+      if (paidAmount < 0 || paidAmount > grandTotal) {
+        throw new Error('Paid amount must be between 0 and total amount');
+      }
+    } else {
+      paidAmount = parseFloat(paid_amount) || grandTotal;
+    }
 
+    // Map payment_mode to payment_type (use payment_mode from request if provided)
+    const paymentTypeToSave = req.body.payment_mode || paymentType;
+    
     // Create sale record
     const saleResult = await client.query(
       `INSERT INTO sales (invoice_number, customer_id, customer_name, subtotal, discount, tax, total_amount, paid_amount, payment_type, total_profit)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
        RETURNING *`,
-      [invoiceNumber, customer_id || null, customer_name || null, subtotal, discountAmount, taxAmount, grandTotal, paidAmount, paymentType, totalProfit]
+      [invoiceNumber, customer_id || null, customer_name || null, subtotal, discountAmount, taxAmount, grandTotal, paidAmount, paymentTypeToSave, totalProfit]
     );
 
     const saleId = saleResult.rows[0].sale_id;
@@ -214,7 +261,7 @@ router.post('/', async (req, res) => {
         [saleId, product_id, quantity, selling_price, purchasePrice, profit]
       );
 
-      // Update product stock
+      // Update product stock (allow negative stock for hardware shops)
       await client.query(
         `UPDATE products 
          SET quantity_in_stock = quantity_in_stock - $1
@@ -223,8 +270,8 @@ router.post('/', async (req, res) => {
       );
     }
 
-    // Update customer balance if credit sale
-    if (customer_id && (paymentType === 'credit' || paymentType === 'split')) {
+    // Update customer balance for all sales (including partial payments)
+    if (customer_id) {
       await client.query(
         `UPDATE customers 
          SET current_balance = opening_balance + 
@@ -252,8 +299,12 @@ router.post('/', async (req, res) => {
       )
     ]);
 
+    const saleData = saleResultFinal.rows[0];
+    // Map payment_type to payment_mode for frontend
+    saleData.payment_mode = saleData.payment_type || 'cash';
+    
     res.status(201).json({
-      ...saleResultFinal.rows[0],
+      ...saleData,
       items: itemsResult.rows
     });
 

@@ -5,32 +5,23 @@ const SupplierModal = ({ supplier, onClose, onSave }) => {
   const [formData, setFormData] = useState({
     name: '',
     contact_number: '',
-    total_purchased: '0',
-    total_paid: '0',
+    address: '',
+    opening_balance: '0',
   });
 
   const [errors, setErrors] = useState({});
   const [saving, setSaving] = useState(false);
-  const [calculatedBalance, setCalculatedBalance] = useState(0);
 
   useEffect(() => {
     if (supplier) {
       setFormData({
         name: supplier.name || '',
         contact_number: supplier.contact_number || '',
-        total_purchased: supplier.total_purchased || '0',
-        total_paid: supplier.total_paid || '0',
+        address: supplier.address || '',
+        opening_balance: supplier.opening_balance?.toString() || '0',
       });
     }
   }, [supplier]);
-
-  // Calculate balance whenever purchased or paid changes
-  useEffect(() => {
-    const purchased = parseFloat(formData.total_purchased) || 0;
-    const paid = parseFloat(formData.total_paid) || 0;
-    const balance = purchased - paid;
-    setCalculatedBalance(balance);
-  }, [formData.total_purchased, formData.total_paid]);
 
   const validate = () => {
     const newErrors = {};
@@ -40,16 +31,10 @@ const SupplierModal = ({ supplier, onClose, onSave }) => {
       newErrors.name = 'Supplier name is required';
     }
 
-    // Total Purchased: numeric, >= 0
-    const purchased = parseFloat(formData.total_purchased);
-    if (isNaN(purchased) || purchased < 0) {
-      newErrors.total_purchased = 'Total purchased must be 0 or greater';
-    }
-
-    // Total Paid: numeric, >= 0
-    const paid = parseFloat(formData.total_paid);
-    if (isNaN(paid) || paid < 0) {
-      newErrors.total_paid = 'Total paid must be 0 or greater';
+    // Amount Already Owed: numeric
+    const openingBalance = parseFloat(formData.opening_balance);
+    if (isNaN(openingBalance)) {
+      newErrors.opening_balance = 'Amount already owed must be a valid number';
     }
 
     setErrors(newErrors);
@@ -83,8 +68,8 @@ const SupplierModal = ({ supplier, onClose, onSave }) => {
       const submitData = {
         name: formData.name.trim(),
         contact_number: formData.contact_number.trim() || null,
-        total_purchased: parseFloat(formData.total_purchased) || 0,
-        total_paid: parseFloat(formData.total_paid) || 0,
+        address: formData.address.trim() || null,
+        opening_balance: parseFloat(formData.opening_balance) || 0,
       };
 
       await onSave(submitData);
@@ -136,55 +121,54 @@ const SupplierModal = ({ supplier, onClose, onSave }) => {
             />
           </div>
 
-          <div className="form-row">
-            <div className="form-group">
-              <label className="form-label">
-                Total Purchased (PKR) <span className="required">*</span>
-              </label>
-              <input
-                type="number"
-                name="total_purchased"
-                value={formData.total_purchased}
-                onChange={handleChange}
-                step="0.01"
-                min="0"
-                className={`form-input ${errors.total_purchased ? 'error' : ''}`}
-                placeholder="0.00"
-              />
-              {errors.total_purchased && (
-                <span className="error-message">{errors.total_purchased}</span>
-              )}
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">
-                Total Paid (PKR) <span className="required">*</span>
-              </label>
-              <input
-                type="number"
-                name="total_paid"
-                value={formData.total_paid}
-                onChange={handleChange}
-                step="0.01"
-                min="0"
-                className={`form-input ${errors.total_paid ? 'error' : ''}`}
-                placeholder="0.00"
-              />
-              {errors.total_paid && (
-                <span className="error-message">{errors.total_paid}</span>
-              )}
-            </div>
+          <div className="form-group">
+            <label className="form-label">Address</label>
+            <textarea
+              name="address"
+              value={formData.address}
+              onChange={handleChange}
+              className="form-input"
+              placeholder="Supplier address (optional)"
+              rows="3"
+            />
           </div>
 
-          <div className="balance-display">
-            <label className="form-label">Balance (Auto-calculated)</label>
-            <div className={`balance-value ${calculatedBalance < 0 ? 'negative' : calculatedBalance > 0 ? 'positive' : ''}`}>
-              {formatCurrency(calculatedBalance)}
-            </div>
-            <p className="balance-help">
-              Balance = Total Purchased − Total Paid
+          <div className="form-group">
+            <label className="form-label">
+              Amount Already Owed (PKR)
+            </label>
+            <input
+              type="number"
+              name="opening_balance"
+              value={formData.opening_balance}
+              onChange={handleChange}
+              step="0.01"
+              className={`form-input ${errors.opening_balance ? 'error' : ''}`}
+              placeholder="0.00"
+            />
+            {errors.opening_balance && (
+              <span className="error-message">{errors.opening_balance}</span>
+            )}
+            <p className="form-help-text" style={{ fontSize: '12px', color: '#64748b', marginTop: '4px' }}>
+              {supplier ? 'Note: Amount already owed cannot be changed if supplier has transactions.' : 'Enter the amount this supplier already owes you (if any) when adding them.'}
             </p>
           </div>
+
+          {supplier && supplier.current_payable_balance !== undefined && (
+            <div className="balance-display" style={{ marginTop: '16px', padding: '12px', backgroundColor: '#f8fafc', borderRadius: '6px' }}>
+              <label className="form-label" style={{ marginBottom: '8px' }}>Current Payable Balance (Auto-calculated)</label>
+              <div style={{ 
+                fontSize: '20px', 
+                fontWeight: 'bold',
+                color: parseFloat(supplier.current_payable_balance) > 0 ? '#dc2626' : parseFloat(supplier.current_payable_balance) === 0 ? '#059669' : '#64748b'
+              }}>
+                {formatCurrency(supplier.current_payable_balance)}
+              </div>
+              <p className="balance-help" style={{ fontSize: '12px', color: '#64748b', marginTop: '4px' }}>
+                Balance = Amount Already Owed + Credit Purchases − Payments
+              </p>
+            </div>
+          )}
 
           <div className="modal-actions">
             <button
@@ -210,6 +194,7 @@ const SupplierModal = ({ supplier, onClose, onSave }) => {
 };
 
 export default SupplierModal;
+
 
 
 

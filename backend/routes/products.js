@@ -153,6 +153,26 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: 'Quantity must be 0 or greater' });
     }
 
+    // Auto-assign to General category if category_id is not provided
+    let finalCategoryId = category_id || null;
+    if (!finalCategoryId) {
+      const generalResult = await db.query(
+        "SELECT category_id FROM categories WHERE LOWER(category_name) = 'general' LIMIT 1"
+      );
+      
+      if (generalResult.rows.length > 0) {
+        finalCategoryId = generalResult.rows[0].category_id;
+      } else {
+        // Create General category if it doesn't exist
+        const createGeneral = await db.query(
+          `INSERT INTO categories (category_name, status) 
+           VALUES ('General', 'active') 
+           RETURNING category_id`
+        );
+        finalCategoryId = createGeneral.rows[0].category_id;
+      }
+    }
+
     const result = await db.query(
       `INSERT INTO products (
         name, item_name_english, item_name_urdu, sku, category, category_id, sub_category_id,
@@ -163,7 +183,7 @@ router.post('/', async (req, res) => {
        RETURNING *`,
       [
         englishName.trim(), englishName.trim(), item_name_urdu || null, sku || null, 
-        category || null, category_id || null, sub_category_id || null,
+        category || null, finalCategoryId, sub_category_id || null,
         purchase_price, finalRetailPrice, finalRetailPrice, finalWholesalePrice, special_price || null,
         unit_type || 'piece', is_frequently_sold || false, display_order || 0, 
         quantity_in_stock || 0, supplier_id || null
@@ -250,6 +270,26 @@ router.put('/:id', async (req, res) => {
       return res.status(400).json({ error: 'Quantity must be 0 or greater' });
     }
 
+    // Auto-assign to General category if category_id is not provided or null
+    let finalCategoryId = category_id || existing.category_id || null;
+    if (!finalCategoryId) {
+      const generalResult = await db.query(
+        "SELECT category_id FROM categories WHERE LOWER(category_name) = 'general' LIMIT 1"
+      );
+      
+      if (generalResult.rows.length > 0) {
+        finalCategoryId = generalResult.rows[0].category_id;
+      } else {
+        // Create General category if it doesn't exist
+        const createGeneral = await db.query(
+          `INSERT INTO categories (category_name, status) 
+           VALUES ('General', 'active') 
+           RETURNING category_id`
+        );
+        finalCategoryId = createGeneral.rows[0].category_id;
+      }
+    }
+
     const result = await db.query(
       `UPDATE products 
        SET name = $1, item_name_english = $2, item_name_urdu = $3, sku = $4, category = $5,
@@ -261,7 +301,7 @@ router.put('/:id', async (req, res) => {
        RETURNING *`,
       [
         englishName.trim(), englishName.trim(), item_name_urdu || null, sku || null,
-        category || null, category_id || null, sub_category_id || null,
+        category || null, finalCategoryId, sub_category_id || null,
         purchase_price, finalRetailPrice, finalRetailPrice, finalWholesalePrice, special_price || null,
         unit_type || existing.unit_type || 'piece', 
         is_frequently_sold !== undefined ? is_frequently_sold : existing.is_frequently_sold,

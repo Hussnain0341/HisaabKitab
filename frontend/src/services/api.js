@@ -35,9 +35,19 @@ export const productsAPI = {
 export const suppliersAPI = {
   getAll: () => api.get('/suppliers'),
   getById: (id) => api.get(`/suppliers/${id}`),
+  getLedger: (id) => api.get(`/suppliers/${id}/ledger`),
   create: (data) => api.post('/suppliers', data),
   update: (id, data) => api.put(`/suppliers/${id}`, data),
   delete: (id) => api.delete(`/suppliers/${id}`),
+};
+
+// Supplier Payments API
+export const supplierPaymentsAPI = {
+  getAll: (params) => api.get('/supplier-payments', { params }),
+  getById: (id) => api.get(`/supplier-payments/${id}`),
+  create: (data) => api.post('/supplier-payments', data),
+  update: (id, data) => api.put(`/supplier-payments/${id}`, data),
+  delete: (id) => api.delete(`/supplier-payments/${id}`),
 };
 
 // Sales API
@@ -62,6 +72,19 @@ export const reportsAPI = {
   getStock: () => api.get('/reports/stock'),
   getCustomersOutstanding: () => api.get('/reports/customers-outstanding'),
   getSuppliersPayable: () => api.get('/reports/suppliers-payable'),
+  getCustomersDue: (params) => api.get('/reports/customers-due', { params }),
+  // New endpoints
+  getDashboardSummary: (params) => api.get('/reports/dashboard-summary', { params }),
+  getSalesSummary: (params) => api.get('/reports/sales-summary', { params }),
+  getSalesByProduct: (params) => api.get('/reports/sales-by-product', { params }),
+  getProfit: (params) => api.get('/reports/profit', { params }),
+  getExpensesSummary: (params) => api.get('/reports/expenses-summary', { params }),
+  getExpensesList: (params) => api.get('/reports/expenses-list', { params }),
+  getStockCurrent: () => api.get('/reports/stock-current'),
+  getStockLow: (params) => api.get('/reports/stock-low', { params }),
+  getCustomerStatement: (id, params) => api.get(`/reports/customer-statement/${id}`, { params }),
+  getSupplierHistory: (id, params) => api.get(`/reports/supplier-history/${id}`, { params }),
+  getDashboard: () => api.get('/reports/dashboard'),
 };
 
 // Settings API
@@ -75,6 +98,7 @@ export const customersAPI = {
   getAll: () => api.get('/customers'),
   getById: (id) => api.get(`/customers/${id}`),
   getHistory: (id) => api.get(`/customers/${id}/history`),
+  getLedger: (id) => api.get(`/customers/${id}/ledger`),
   create: (data) => api.post('/customers', data),
   update: (id, data) => api.put(`/customers/${id}`, data),
   delete: (id) => api.delete(`/customers/${id}`),

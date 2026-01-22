@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { suppliersAPI } from '../services/api';
 import SupplierModal from './SupplierModal';
+import SupplierDetailView from './SupplierDetailView';
 import Pagination from './Pagination';
 import './Suppliers.css';
 
@@ -11,6 +12,7 @@ const Suppliers = ({ readOnly = false }) => {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingSupplier, setEditingSupplier] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
+  const [viewingSupplier, setViewingSupplier] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(20);
@@ -42,6 +44,10 @@ const Suppliers = ({ readOnly = false }) => {
   const handleEdit = (supplier) => {
     setEditingSupplier(supplier);
     setModalOpen(true);
+  };
+
+  const handleView = (supplier) => {
+    setViewingSupplier(supplier.supplier_id);
   };
 
   const handleDelete = async (supplierId) => {
@@ -83,7 +89,16 @@ const Suppliers = ({ readOnly = false }) => {
   };
 
   const formatCurrency = (amount) => {
-    return `PKR ${Number(amount).toFixed(2)}`;
+    return `PKR ${Number(amount || 0).toFixed(2)}`;
+  };
+
+  const formatDate = (date) => {
+    if (!date) return '-';
+    return new Date(date).toLocaleDateString('en-PK', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
   };
 
   // Filter suppliers based on search query
@@ -115,6 +130,20 @@ const Suppliers = ({ readOnly = false }) => {
       <div className="content-container">
         <div className="loading">Loading suppliers...</div>
       </div>
+    );
+  }
+
+  // Show supplier detail view if viewing a supplier
+  if (viewingSupplier) {
+    return (
+      <SupplierDetailView
+        supplierId={viewingSupplier}
+        onClose={() => {
+          setViewingSupplier(null);
+          fetchSuppliers(); // Refresh list when returning
+        }}
+        readOnly={readOnly}
+      />
     );
   }
 
@@ -182,52 +211,68 @@ const Suppliers = ({ readOnly = false }) => {
             <thead>
               <tr>
                 <th>Supplier Name</th>
-                <th>Contact Number</th>
-                <th>Total Purchased</th>
-                <th>Total Paid</th>
-                <th>Balance</th>
+                <th>Phone</th>
+                <th>Payable Balance</th>
+                <th>Last Activity</th>
                 <th>Actions</th>
               </tr>
             </thead>
             <tbody>
               {paginatedSuppliers.length === 0 ? (
                 <tr>
-                  <td colSpan="6" className="empty-state">
+                  <td colSpan="5" className="empty-state">
                     {searchQuery ? `No suppliers found matching "${searchQuery}".` : 'No suppliers found. Click "Add Supplier" to get started.'}
                   </td>
                 </tr>
               ) : (
-                paginatedSuppliers.map((supplier) => (
-                  <tr key={supplier.supplier_id}>
-                    <td>{supplier.name}</td>
-                    <td>{supplier.contact_number || '-'}</td>
-                    <td>{formatCurrency(supplier.total_purchased)}</td>
-                    <td>{formatCurrency(supplier.total_paid)}</td>
-                    <td className={supplier.balance < 0 ? 'negative-balance' : supplier.balance > 0 ? 'positive-balance' : ''}>
-                      {formatCurrency(supplier.balance)}
-                    </td>
-                    <td className="actions-cell">
-                      {!readOnly ? (
-                        <>
-                          <button
-                            className="btn-edit"
-                            onClick={() => handleEdit(supplier)}
-                          >
-                            Edit
-                          </button>
-                          <button
-                            className="btn-delete"
-                            onClick={() => setDeleteConfirm(supplier.supplier_id)}
-                          >
-                            Delete
-                          </button>
-                        </>
-                      ) : (
-                        <span className="read-only-label">View Only</span>
-                      )}
-                    </td>
-                  </tr>
-                ))
+                paginatedSuppliers.map((supplier) => {
+                  const balance = parseFloat(supplier.current_payable_balance || 0);
+                  const lastActivity = supplier.last_purchase_date || supplier.last_payment_date;
+                  return (
+                    <tr key={supplier.supplier_id}>
+                      <td><strong>{supplier.name}</strong></td>
+                      <td>{supplier.contact_number || '-'}</td>
+                      <td>
+                        <span 
+                          style={{
+                            fontWeight: 'bold',
+                            color: balance > 0 ? '#dc2626' : balance === 0 ? '#059669' : '#64748b',
+                            fontSize: '15px'
+                          }}
+                        >
+                          {formatCurrency(balance)}
+                        </span>
+                      </td>
+                      <td>{formatDate(lastActivity)}</td>
+                      <td className="actions-cell">
+                        {!readOnly ? (
+                          <>
+                            <button
+                              className="btn-view"
+                              onClick={() => handleView(supplier)}
+                            >
+                              View
+                            </button>
+                            <button
+                              className="btn-edit"
+                              onClick={() => handleEdit(supplier)}
+                            >
+                              Edit
+                            </button>
+                            <button
+                              className="btn-delete"
+                              onClick={() => setDeleteConfirm(supplier.supplier_id)}
+                            >
+                              Delete
+                            </button>
+                          </>
+                        ) : (
+                          <span className="read-only-label">View Only</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>

@@ -8,9 +8,7 @@ const Inventory = ({ readOnly = false }) => {
   const [products, setProducts] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
   const [categories, setCategories] = useState([]);
-  const [subCategories, setSubCategories] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState(null);
-  const [selectedSubCategory, setSelectedSubCategory] = useState(null);
   const [showFrequentlySoldOnly, setShowFrequentlySoldOnly] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
@@ -25,7 +23,7 @@ const Inventory = ({ readOnly = false }) => {
   // Ensure products is always an array
   const safeProducts = Array.isArray(products) ? products : [];
   
-  // Filter products based on search query, category, and sub-category
+  // Filter products based on search query and category
   const filteredProducts = useMemo(() => {
     let filtered = safeProducts;
     
@@ -34,14 +32,9 @@ const Inventory = ({ readOnly = false }) => {
       filtered = filtered.filter(p => p.category_id === selectedCategory);
     }
     
-    // Apply sub-category filter
-    if (selectedSubCategory) {
-      filtered = filtered.filter(p => p.sub_category_id === selectedSubCategory);
-    }
-    
-    // Apply frequently sold filter
+    // Apply frequently sold filter - check for boolean true
     if (showFrequentlySoldOnly) {
-      filtered = filtered.filter(p => p.is_frequently_sold);
+      filtered = filtered.filter(p => p.is_frequently_sold === true || p.is_frequently_sold === 1);
     }
     
     // Apply search query filter
@@ -49,14 +42,12 @@ const Inventory = ({ readOnly = false }) => {
       const query = searchQuery.toLowerCase().trim();
       filtered = filtered.filter(product => {
         const nameEnglish = (product.item_name_english || product.name || '').toLowerCase();
-        const nameUrdu = (product.item_name_urdu || '').toLowerCase();
-        const sku = (product.sku || '').toLowerCase();
-        return nameEnglish.includes(query) || nameUrdu.includes(query) || sku.includes(query);
+        return nameEnglish.includes(query);
       });
     }
     
     return filtered;
-  }, [safeProducts, searchQuery, selectedCategory, selectedSubCategory, showFrequentlySoldOnly]);
+  }, [safeProducts, searchQuery, selectedCategory, showFrequentlySoldOnly]);
 
   // Pagination logic
   const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
@@ -67,20 +58,12 @@ const Inventory = ({ readOnly = false }) => {
   // Reset to page 1 when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery, selectedCategory, selectedSubCategory, showFrequentlySoldOnly]);
+  }, [searchQuery, selectedCategory, showFrequentlySoldOnly]);
 
   // Fetch products and suppliers on component mount
   useEffect(() => {
     fetchData();
   }, []);
-
-  useEffect(() => {
-    if (selectedCategory) {
-      fetchSubCategories();
-    } else {
-      setSubCategories([]);
-    }
-  }, [selectedCategory]);
 
   const fetchData = async () => {
     try {
@@ -117,11 +100,12 @@ const Inventory = ({ readOnly = false }) => {
       const productsResponse = await productsAPI.getAll();
       const productsData = Array.isArray(productsResponse.data) ? productsResponse.data : [];
       
-      // Sort: frequently sold first, then display_order, then name
+      // Sort: frequently sold first, then name
       productsData.sort((a, b) => {
-        if (a.is_frequently_sold && !b.is_frequently_sold) return -1;
-        if (!a.is_frequently_sold && b.is_frequently_sold) return 1;
-        if (a.display_order !== b.display_order) return (a.display_order || 0) - (b.display_order || 0);
+        const aFrequent = a.is_frequently_sold === true || a.is_frequently_sold === 1;
+        const bFrequent = b.is_frequently_sold === true || b.is_frequently_sold === 1;
+        if (aFrequent && !bFrequent) return -1;
+        if (!aFrequent && bFrequent) return 1;
         const nameA = (a.item_name_english || a.name || '').toLowerCase();
         const nameB = (b.item_name_english || b.name || '').toLowerCase();
         return nameA.localeCompare(nameB);
@@ -134,16 +118,6 @@ const Inventory = ({ readOnly = false }) => {
     }
   };
 
-  const fetchSubCategories = async () => {
-    try {
-      const response = await categoriesAPI.getSubCategoriesAll();
-      const filtered = response.data.filter(sc => sc.category_id === selectedCategory);
-      setSubCategories(filtered || []);
-    } catch (err) {
-      console.error('Error fetching sub-categories:', err);
-      setSubCategories([]);
-    }
-  };
 
   const handleSort = (key) => {
     let direction = 'asc';
@@ -266,7 +240,7 @@ const Inventory = ({ readOnly = false }) => {
             <input
               type="text"
               className="form-input"
-              placeholder="Search by name (English/Urdu) or SKU..."
+              placeholder="Search by product name..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               style={{ fontSize: '14px', width: '100%' }}
@@ -279,28 +253,12 @@ const Inventory = ({ readOnly = false }) => {
               value={selectedCategory || ''} 
               onChange={(e) => {
                 setSelectedCategory(e.target.value ? parseInt(e.target.value) : null);
-                setSelectedSubCategory(null);
               }}
               style={{ fontSize: '14px' }}
             >
               <option value="">All Categories</option>
               {categories.filter(c => c.status === 'active').map(cat => (
                 <option key={cat.category_id} value={cat.category_id}>{cat.category_name}</option>
-              ))}
-            </select>
-          </div>
-          <div style={{ flex: 1, minWidth: '200px' }}>
-            <label className="form-label" style={{ marginBottom: '8px', display: 'block', fontSize: '13px' }}>Sub-Category</label>
-            <select 
-              className="form-input" 
-              value={selectedSubCategory || ''} 
-              onChange={(e) => setSelectedSubCategory(e.target.value ? parseInt(e.target.value) : null)}
-              disabled={!selectedCategory}
-              style={{ fontSize: '14px' }}
-            >
-              <option value="">All Sub-Categories</option>
-              {subCategories.filter(sc => sc.status === 'active').map(subCat => (
-                <option key={subCat.sub_category_id} value={subCat.sub_category_id}>{subCat.sub_category_name}</option>
               ))}
             </select>
           </div>
@@ -314,10 +272,9 @@ const Inventory = ({ readOnly = false }) => {
               />
               Frequently Sold Only
             </label>
-            {(selectedCategory || selectedSubCategory || showFrequentlySoldOnly || searchQuery) && (
+            {(selectedCategory || showFrequentlySoldOnly || searchQuery) && (
               <button className="btn btn-secondary" onClick={() => {
                 setSelectedCategory(null);
-                setSelectedSubCategory(null);
                 setShowFrequentlySoldOnly(false);
                 setSearchQuery('');
               }}>
@@ -350,9 +307,6 @@ const Inventory = ({ readOnly = false }) => {
                 <th onClick={() => handleSort('name')} className="sortable">
                   Product Name {getSortIcon('name')}
                 </th>
-                <th onClick={() => handleSort('sku')} className="sortable">
-                  SKU {getSortIcon('sku')}
-                </th>
                 <th>Category</th>
                 <th>Purchase Price</th>
                 <th>Selling Price</th>
@@ -366,7 +320,7 @@ const Inventory = ({ readOnly = false }) => {
             <tbody>
               {paginatedProducts.length === 0 ? (
                 <tr>
-                  <td colSpan="8" className="empty-state">
+                  <td colSpan="7" className="empty-state">
                     {searchQuery ? `No products found matching "${searchQuery}".` : 'No products found. Click "Add Product" to get started.'}
                   </td>
                 </tr>
@@ -375,25 +329,17 @@ const Inventory = ({ readOnly = false }) => {
                   const displayName = product.item_name_english || product.name || 'N/A';
                   const retailPrice = product.retail_price || product.selling_price;
                   const wholesalePrice = product.wholesale_price || retailPrice;
+                  const isFrequent = product.is_frequently_sold === true || product.is_frequently_sold === 1;
                   return (
                   <tr key={product.product_id}>
                     <td>
                       <div>{displayName}</div>
-                      {product.item_name_urdu && (
-                        <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>
-                          {product.item_name_urdu}
-                        </div>
-                      )}
-                      {product.is_frequently_sold && (
+                      {isFrequent && (
                         <span style={{ fontSize: '10px', color: '#059669', fontWeight: '600', marginLeft: '4px' }}>⭐</span>
                       )}
                     </td>
-                    <td>{product.sku || '-'}</td>
                     <td>
                       {product.category_name || product.category || '-'}
-                      {product.sub_category_name && (
-                        <div style={{ fontSize: '11px', color: '#64748b' }}>→ {product.sub_category_name}</div>
-                      )}
                     </td>
                     <td>{formatCurrency(product.purchase_price)}</td>
                     <td>

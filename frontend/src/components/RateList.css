@@ -45,6 +45,22 @@
   text-align: right;
 }
 
+.editable-price-cell {
+  transition: background-color 0.15s ease;
+  position: relative;
+}
+
+.editable-price-cell:hover {
+  background-color: #f0f9ff;
+  border-radius: 4px;
+}
+
+.editable-price-cell.editing {
+  padding: 4px;
+}
+
+
+
 
 
 

@@ -47,7 +47,7 @@ router.get('/:id', async (req, res) => {
       db.query(
         `SELECT 
           pi.*,
-          pr.name as item_name,
+          COALESCE(pr.item_name_english, pr.name) as item_name,
           pr.sku as item_sku
         FROM purchase_items pi
         JOIN products pr ON pi.item_id = pr.product_id
@@ -166,23 +166,25 @@ router.post('/', async (req, res) => {
     }
 
     // Update supplier balance if credit purchase
-    if (paymentType === 'credit') {
-      await client.query(
-        `UPDATE suppliers 
-         SET total_purchased = total_purchased + $1,
-             balance = opening_balance + total_purchased + $1 - total_paid
-         WHERE supplier_id = $2`,
-        [totalAmount, supplier_id]
-      );
-    } else {
-      // Cash purchase - update total_purchased only
-      await client.query(
-        `UPDATE suppliers 
-         SET total_purchased = total_purchased + $1
-         WHERE supplier_id = $2`,
-        [totalAmount, supplier_id]
-      );
-    }
+    // Balance = opening_balance + (sum of credit purchases) - (sum of payments)
+    // This is handled by triggers, but we update explicitly for safety
+    await client.query(
+      `UPDATE suppliers 
+       SET balance = opening_balance + 
+           COALESCE((
+             SELECT SUM(total_amount) 
+             FROM purchases 
+             WHERE supplier_id = suppliers.supplier_id 
+             AND payment_type = 'credit'
+           ), 0) - 
+           COALESCE((
+             SELECT SUM(amount) 
+             FROM supplier_payments 
+             WHERE supplier_id = suppliers.supplier_id
+           ), 0)
+       WHERE supplier_id = $1`,
+      [supplier_id]
+    );
 
     await client.query('COMMIT');
 
@@ -257,22 +259,24 @@ router.delete('/:id', async (req, res) => {
     }
 
     // Reverse supplier balance update
-    if (purchase.payment_type === 'credit') {
-      await client.query(
-        `UPDATE suppliers 
-         SET total_purchased = GREATEST(0, total_purchased - $1),
-             balance = opening_balance + GREATEST(0, total_purchased - $1) - total_paid
-         WHERE supplier_id = $2`,
-        [purchase.total_amount, purchase.supplier_id]
-      );
-    } else {
-      await client.query(
-        `UPDATE suppliers 
-         SET total_purchased = GREATEST(0, total_purchased - $1)
-         WHERE supplier_id = $2`,
-        [purchase.total_amount, purchase.supplier_id]
-      );
-    }
+    // Recalculate balance after purchase deletion
+    await client.query(
+      `UPDATE suppliers 
+       SET balance = opening_balance + 
+           COALESCE((
+             SELECT SUM(total_amount) 
+             FROM purchases 
+             WHERE supplier_id = suppliers.supplier_id 
+             AND payment_type = 'credit'
+           ), 0) - 
+           COALESCE((
+             SELECT SUM(amount) 
+             FROM supplier_payments 
+             WHERE supplier_id = suppliers.supplier_id
+           ), 0)
+       WHERE supplier_id = $1`,
+      [purchase.supplier_id]
+    );
 
     // Delete purchase items (cascade should handle this, but explicit is safer)
     await client.query('DELETE FROM purchase_items WHERE purchase_id = $1', [id]);
@@ -294,6 +298,7 @@ router.delete('/:id', async (req, res) => {
 });
 
 module.exports = router;
+
 
 
 

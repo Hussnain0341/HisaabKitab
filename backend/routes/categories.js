@@ -2,9 +2,31 @@ const express = require('express');
 const router = express.Router();
 const db = require('../db');
 
+// Ensure "General" category exists (helper function)
+async function ensureGeneralCategory() {
+  try {
+    const generalCheck = await db.query(
+      "SELECT category_id FROM categories WHERE LOWER(category_name) = 'general'"
+    );
+    
+    if (generalCheck.rows.length === 0) {
+      await db.query(
+        `INSERT INTO categories (category_name, status) 
+         VALUES ('General', 'active')
+         ON CONFLICT DO NOTHING`
+      );
+    }
+  } catch (err) {
+    console.error('Error ensuring General category:', err);
+  }
+}
+
 // Get all categories with sub-categories count
 router.get('/', async (req, res) => {
   try {
+    // Ensure General category exists
+    await ensureGeneralCategory();
+    
     const result = await db.query(
       `SELECT 
         c.category_id,
@@ -15,7 +37,9 @@ router.get('/', async (req, res) => {
       FROM categories c
       LEFT JOIN sub_categories sc ON c.category_id = sc.category_id AND sc.status = 'active'
       GROUP BY c.category_id, c.category_name, c.status, c.created_at
-      ORDER BY c.category_name ASC`
+      ORDER BY 
+        CASE WHEN LOWER(c.category_name) = 'general' THEN 0 ELSE 1 END,
+        c.category_name ASC`
     );
     res.json(result.rows);
   } catch (error) {
@@ -57,8 +81,16 @@ router.post('/', async (req, res) => {
     const { category_name, status } = req.body;
 
     if (!category_name || !category_name.trim()) {
-      return res.status(400).json({ error: 'Category name is required' });
+      return res.status(400).json({ error: 'Product Group name is required' });
     }
+
+    // Prevent creating another "General" category
+    if (category_name.trim().toLowerCase() === 'general') {
+      return res.status(400).json({ error: 'Product Group "General" already exists and cannot be created again' });
+    }
+
+    // Ensure General category exists
+    await ensureGeneralCategory();
 
     const result = await db.query(
       `INSERT INTO categories (category_name, status)
@@ -71,9 +103,9 @@ router.post('/', async (req, res) => {
   } catch (error) {
     console.error('Error creating category:', error);
     if (error.code === '23505') {
-      return res.status(400).json({ error: 'Category name already exists' });
+      return res.status(400).json({ error: 'Product Group name already exists' });
     }
-    res.status(500).json({ error: 'Failed to create category', message: error.message });
+    res.status(500).json({ error: 'Failed to create Product Group', message: error.message });
   }
 });
 
@@ -83,8 +115,30 @@ router.put('/:id', async (req, res) => {
     const { id } = req.params;
     const { category_name, status } = req.body;
 
+    // Check if this is the General category
+    const categoryCheck = await db.query(
+      'SELECT category_name FROM categories WHERE category_id = $1',
+      [id]
+    );
+
+    if (categoryCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Product Group not found' });
+    }
+
+    const isGeneral = categoryCheck.rows[0].category_name.toLowerCase() === 'general';
+
+    // Prevent renaming General category
+    if (category_name && category_name.trim().toLowerCase() !== 'general' && isGeneral) {
+      return res.status(400).json({ error: 'Cannot rename "General" Product Group' });
+    }
+
+    // Prevent changing General to inactive
+    if (status === 'inactive' && isGeneral) {
+      return res.status(400).json({ error: 'Cannot deactivate "General" Product Group' });
+    }
+
     if (!category_name || !category_name.trim()) {
-      return res.status(400).json({ error: 'Category name is required' });
+      return res.status(400).json({ error: 'Product Group name is required' });
     }
 
     const result = await db.query(
@@ -96,23 +150,42 @@ router.put('/:id', async (req, res) => {
     );
 
     if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Category not found' });
+      return res.status(404).json({ error: 'Product Group not found' });
     }
 
     res.json(result.rows[0]);
   } catch (error) {
     console.error('Error updating category:', error);
     if (error.code === '23505') {
-      return res.status(400).json({ error: 'Category name already exists' });
+      return res.status(400).json({ error: 'Product Group name already exists' });
     }
-    res.status(500).json({ error: 'Failed to update category', message: error.message });
+    res.status(500).json({ error: 'Failed to update Product Group', message: error.message });
   }
 });
 
-// Delete category (only if no products use it)
+// Delete category (only if no products use it, and not General)
 router.delete('/:id', async (req, res) => {
   try {
     const { id } = req.params;
+    
+    // Check if this is the General category
+    const categoryCheck = await db.query(
+      'SELECT category_name FROM categories WHERE category_id = $1',
+      [id]
+    );
+
+    if (categoryCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Product Group not found' });
+    }
+
+    const isGeneral = categoryCheck.rows[0].category_name.toLowerCase() === 'general';
+
+    // Prevent deleting General category
+    if (isGeneral) {
+      return res.status(400).json({ 
+        error: 'Cannot delete "General" Product Group. It is required by the system.' 
+      });
+    }
     
     const productsCheck = await db.query(
       'SELECT COUNT(*) as count FROM products WHERE category_id = $1',
@@ -122,9 +195,18 @@ router.delete('/:id', async (req, res) => {
     const productsCount = parseInt(productsCheck.rows[0].count);
 
     if (productsCount > 0) {
-      return res.status(400).json({ 
-        error: `Cannot delete category: used by ${productsCount} product(s)` 
-      });
+      // Move products to General category before deletion
+      const generalResult = await db.query(
+        "SELECT category_id FROM categories WHERE LOWER(category_name) = 'general'"
+      );
+      
+      if (generalResult.rows.length > 0) {
+        const generalCategoryId = generalResult.rows[0].category_id;
+        await db.query(
+          'UPDATE products SET category_id = $1 WHERE category_id = $2',
+          [generalCategoryId, id]
+        );
+      }
     }
 
     const result = await db.query(
@@ -133,13 +215,13 @@ router.delete('/:id', async (req, res) => {
     );
 
     if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Category not found' });
+      return res.status(404).json({ error: 'Product Group not found' });
     }
 
-    res.json({ message: 'Category deleted successfully', category_id: id });
+    res.json({ message: 'Product Group deleted successfully', category_id: id });
   } catch (error) {
     console.error('Error deleting category:', error);
-    res.status(500).json({ error: 'Failed to delete category', message: error.message });
+    res.status(500).json({ error: 'Failed to delete Product Group', message: error.message });
   }
 });
 
@@ -269,6 +351,8 @@ router.delete('/sub-categories/:id', async (req, res) => {
 });
 
 module.exports = router;
+
+
 
 
 

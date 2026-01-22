@@ -124,7 +124,7 @@ router.post('/', async (req, res) => {
 
     // Validation
     if (!expense_category || !expense_category.trim()) {
-      return res.status(400).json({ error: 'Expense category is required' });
+      return res.status(400).json({ error: 'Expense name is required' });
     }
 
     const expenseAmount = parseFloat(amount);
@@ -208,6 +208,8 @@ router.delete('/:id', async (req, res) => {
 });
 
 module.exports = router;
+
+
 
 
 

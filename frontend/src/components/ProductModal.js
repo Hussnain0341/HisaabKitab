@@ -4,13 +4,9 @@ import './ProductModal.css';
 
 const ProductModal = ({ product, suppliers, onClose, onSave }) => {
   const [categories, setCategories] = useState([]);
-  const [subCategories, setSubCategories] = useState([]);
   const [formData, setFormData] = useState({
     item_name_english: '',
-    item_name_urdu: '',
-    sku: '',
     category_id: '',
-    sub_category_id: '',
     category: '',
     purchase_price: '',
     retail_price: '',
@@ -19,7 +15,6 @@ const ProductModal = ({ product, suppliers, onClose, onSave }) => {
     selling_price: '',
     unit_type: 'piece',
     is_frequently_sold: false,
-    display_order: '0',
     quantity_in_stock: '0',
     supplier_id: '',
   });
@@ -35,10 +30,7 @@ const ProductModal = ({ product, suppliers, onClose, onSave }) => {
     if (product) {
       setFormData({
         item_name_english: product.item_name_english || product.name || '',
-        item_name_urdu: product.item_name_urdu || '',
-        sku: product.sku || '',
         category_id: product.category_id || '',
-        sub_category_id: product.sub_category_id || '',
         category: product.category || '',
         purchase_price: product.purchase_price || '',
         retail_price: product.retail_price || product.selling_price || '',
@@ -47,23 +39,11 @@ const ProductModal = ({ product, suppliers, onClose, onSave }) => {
         selling_price: product.selling_price || product.retail_price || '',
         unit_type: product.unit_type || 'piece',
         is_frequently_sold: product.is_frequently_sold || false,
-        display_order: product.display_order || '0',
         quantity_in_stock: product.quantity_in_stock || '0',
         supplier_id: product.supplier_id || '',
       });
-      if (product.category_id) {
-        fetchSubCategories(product.category_id);
-      }
     }
-  }, [product]);
-
-  useEffect(() => {
-    if (formData.category_id) {
-      fetchSubCategories(formData.category_id);
-    } else {
-      setSubCategories([]);
-    }
-  }, [formData.category_id]);
+  }, [product, categories, suppliers]);
 
   const fetchCategories = async () => {
     try {
@@ -71,16 +51,6 @@ const ProductModal = ({ product, suppliers, onClose, onSave }) => {
       setCategories(response.data || []);
     } catch (err) {
       console.error('Error fetching categories:', err);
-    }
-  };
-
-  const fetchSubCategories = async (categoryId) => {
-    try {
-      const response = await categoriesAPI.getSubCategoriesAll();
-      const filtered = response.data.filter(sc => sc.category_id === categoryId);
-      setSubCategories(filtered);
-    } catch (err) {
-      console.error('Error fetching sub-categories:', err);
     }
   };
 
@@ -127,10 +97,6 @@ const ProductModal = ({ product, suppliers, onClose, onSave }) => {
         [name]: null
       }));
     }
-    // Clear sub-category when category changes
-    if (name === 'category_id') {
-      setFormData(prev => ({ ...prev, sub_category_id: '' }));
-    }
   };
 
   const handleSubmit = async (e) => {
@@ -145,10 +111,7 @@ const ProductModal = ({ product, suppliers, onClose, onSave }) => {
       const submitData = {
         name: formData.item_name_english.trim(), // Backward compatibility
         item_name_english: formData.item_name_english.trim(),
-        item_name_urdu: formData.item_name_urdu.trim() || null,
-        sku: formData.sku.trim() || null,
         category_id: formData.category_id || null,
-        sub_category_id: formData.sub_category_id || null,
         category: formData.category.trim() || null,
         purchase_price: parseFloat(formData.purchase_price),
         retail_price: parseFloat(formData.retail_price),
@@ -157,7 +120,6 @@ const ProductModal = ({ product, suppliers, onClose, onSave }) => {
         selling_price: parseFloat(formData.retail_price), // For backward compatibility
         unit_type: formData.unit_type || 'piece',
         is_frequently_sold: formData.is_frequently_sold || false,
-        display_order: parseInt(formData.display_order) || 0,
         quantity_in_stock: parseInt(formData.quantity_in_stock),
         supplier_id: formData.supplier_id || null,
       };
@@ -170,6 +132,8 @@ const ProductModal = ({ product, suppliers, onClose, onSave }) => {
       setSaving(false);
     }
   };
+
+  const activeCategories = categories.filter(c => c.status === 'active');
 
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -195,29 +159,25 @@ const ProductModal = ({ product, suppliers, onClose, onSave }) => {
             {errors.item_name_english && <span className="error-message">{errors.item_name_english}</span>}
           </div>
 
-          <div className="form-group">
-            <label className="form-label">Item Name (Urdu)</label>
-            <input
-              type="text"
-              name="item_name_urdu"
-              value={formData.item_name_urdu}
-              onChange={handleChange}
-              className="form-input"
-              placeholder="Enter item name in Urdu (optional)"
-            />
-          </div>
-
           <div className="form-row">
             <div className="form-group">
-              <label className="form-label">SKU</label>
-              <input
-                type="text"
-                name="sku"
-                value={formData.sku}
+              <label className="form-label">
+                Product Group <span style={{ fontSize: '11px', color: '#64748b' }}>(Optional)</span>
+                <span style={{ fontSize: '11px', color: '#64748b', display: 'block', marginTop: '2px' }}>سامان کی قسم</span>
+              </label>
+              <select
+                name="category_id"
+                value={formData.category_id}
                 onChange={handleChange}
                 className="form-input"
-                placeholder="Stock keeping unit"
-              />
+              >
+                <option value="">Auto (General)</option>
+                {activeCategories.map(c => (
+                  <option key={c.category_id} value={c.category_id}>
+                    {c.category_name}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <div className="form-group">
@@ -234,39 +194,6 @@ const ProductModal = ({ product, suppliers, onClose, onSave }) => {
                 <option value="box">Box</option>
                 <option value="kg">Kilogram</option>
                 <option value="roll">Roll</option>
-              </select>
-            </div>
-          </div>
-
-          <div className="form-row">
-            <div className="form-group">
-              <label className="form-label">Category</label>
-              <select
-                name="category_id"
-                value={formData.category_id}
-                onChange={handleChange}
-                className="form-input"
-              >
-                <option value="">Select Category</option>
-                {categories.filter(c => c.status === 'active').map(cat => (
-                  <option key={cat.category_id} value={cat.category_id}>{cat.category_name}</option>
-                ))}
-              </select>
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Sub-Category</label>
-              <select
-                name="sub_category_id"
-                value={formData.sub_category_id}
-                onChange={handleChange}
-                className="form-input"
-                disabled={!formData.category_id}
-              >
-                <option value="">Select Sub-Category (Optional)</option>
-                {subCategories.filter(sc => sc.status === 'active').map(subCat => (
-                  <option key={subCat.sub_category_id} value={subCat.sub_category_id}>{subCat.sub_category_name}</option>
-                ))}
               </select>
             </div>
           </div>
@@ -369,10 +296,10 @@ const ProductModal = ({ product, suppliers, onClose, onSave }) => {
                 onChange={handleChange}
                 className="form-input"
               >
-                <option value="">Select Supplier</option>
-                {suppliers.map((supplier) => (
-                  <option key={supplier.supplier_id} value={supplier.supplier_id}>
-                    {supplier.name}
+                <option value="">No Supplier</option>
+                {suppliers.map(s => (
+                  <option key={s.supplier_id} value={s.supplier_id}>
+                    {s.name}
                   </option>
                 ))}
               </select>
@@ -380,21 +307,6 @@ const ProductModal = ({ product, suppliers, onClose, onSave }) => {
           </div>
 
           <div className="form-row">
-            <div className="form-group">
-              <label className="form-label">Display Order</label>
-              <input
-                type="number"
-                name="display_order"
-                value={formData.display_order}
-                onChange={handleChange}
-                min="0"
-                step="1"
-                className="form-input"
-                placeholder="0"
-              />
-              <small style={{ fontSize: '11px', color: '#64748b' }}>Lower numbers appear first in lists</small>
-            </div>
-
             <div className="form-group" style={{ display: 'flex', alignItems: 'center', paddingTop: '24px' }}>
               <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
                 <input

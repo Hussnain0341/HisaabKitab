@@ -5,11 +5,13 @@ import Dashboard from './components/Dashboard';
 import Inventory from './components/Inventory';
 import Billing from './components/Billing';
 import Suppliers from './components/Suppliers';
+import SupplierPayments from './components/SupplierPayments';
 import Customers from './components/Customers';
 import Categories from './components/Categories';
 import Purchases from './components/Purchases';
 import Expenses from './components/Expenses';
 import RateList from './components/RateList';
+import Invoices from './components/Invoices';
 import Reports from './components/Reports';
 import Settings from './components/Settings';
 import Sidebar from './components/Sidebar';
@@ -43,11 +45,13 @@ function App() {
               <Route path="/inventory" element={<Inventory key={refreshTrigger} readOnly={readOnlyMode} />} />
               <Route path="/billing" element={<Billing key={refreshTrigger} readOnly={readOnlyMode} />} />
               <Route path="/suppliers" element={<Suppliers key={refreshTrigger} readOnly={readOnlyMode} />} />
+              <Route path="/supplier-payments" element={<SupplierPayments key={refreshTrigger} readOnly={readOnlyMode} />} />
               <Route path="/customers" element={<Customers key={refreshTrigger} readOnly={readOnlyMode} />} />
               <Route path="/categories" element={<Categories key={refreshTrigger} readOnly={readOnlyMode} />} />
               <Route path="/purchases" element={<Purchases key={refreshTrigger} readOnly={readOnlyMode} />} />
               <Route path="/expenses" element={<Expenses key={refreshTrigger} readOnly={readOnlyMode} />} />
-              <Route path="/rate-list" element={<RateList key={refreshTrigger} readOnly={readOnlyMode} />} />
+              <Route path="/rate-list" element={<RateList key={readOnlyMode} />} />
+              <Route path="/invoices" element={<Invoices key={refreshTrigger} readOnly={readOnlyMode} />} />
               <Route path="/reports" element={<Reports key={refreshTrigger} readOnly={readOnlyMode} />} />
               <Route path="/settings" element={<Settings key={refreshTrigger} readOnly={readOnlyMode} />} />
               <Route path="*" element={<Navigate to="/" replace />} />

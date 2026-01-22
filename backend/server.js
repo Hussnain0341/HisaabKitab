@@ -72,6 +72,7 @@ app.use('/api/categories', require('./routes/categories'));
 app.use('/api/purchases', require('./routes/purchases'));
 app.use('/api/expenses', require('./routes/expenses'));
 app.use('/api/customer-payments', require('./routes/customer_payments'));
+app.use('/api/supplier-payments', require('./routes/supplier-payments'));
 app.use('/api/reports', require('./routes/reports'));
 app.use('/api/settings', require('./routes/settings'));
 app.use('/api/backup', require('./routes/backup'));

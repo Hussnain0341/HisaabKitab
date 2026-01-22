@@ -5,7 +5,6 @@ import './Expenses.css';
 
 const Expenses = ({ readOnly = false }) => {
   const [expenses, setExpenses] = useState([]);
-  const [summary, setSummary] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
@@ -24,7 +23,6 @@ const Expenses = ({ readOnly = false }) => {
 
   useEffect(() => {
     fetchExpenses();
-    fetchSummary();
   }, [startDate, endDate]);
 
   const updateDateRange = () => {
@@ -92,14 +90,6 @@ const Expenses = ({ readOnly = false }) => {
     }
   };
 
-  const fetchSummary = async () => {
-    try {
-      const response = await expensesAPI.getSummary({ start_date: startDate, end_date: endDate });
-      setSummary(response.data);
-    } catch (err) {
-      console.error('Error fetching summary:', err);
-    }
-  };
 
   const handleSave = async (data) => {
     try {
@@ -109,7 +99,6 @@ const Expenses = ({ readOnly = false }) => {
         await expensesAPI.create(data);
       }
       await fetchExpenses();
-      await fetchSummary();
       setModalOpen(false);
       setEditingExpense(null);
     } catch (err) {
@@ -122,7 +111,6 @@ const Expenses = ({ readOnly = false }) => {
     try {
       await expensesAPI.delete(expenseId);
       await fetchExpenses();
-      await fetchSummary();
     } catch (err) {
       alert(err.response?.data?.error || 'Failed to delete expense');
     }
@@ -130,6 +118,14 @@ const Expenses = ({ readOnly = false }) => {
 
   const formatCurrency = (amount) => `PKR ${Number(amount || 0).toFixed(2)}`;
   const totalToday = expenses.reduce((sum, exp) => sum + parseFloat(exp.amount), 0);
+  
+  // Calculate statistics - essential metrics
+  const totalExpenses = expenses.length;
+  const totalAmount = expenses.reduce((sum, exp) => sum + parseFloat(exp.amount || 0), 0);
+  const averageAmount = totalExpenses > 0 ? totalAmount / totalExpenses : 0;
+  const highestExpense = expenses.length > 0 
+    ? Math.max(...expenses.map(exp => parseFloat(exp.amount || 0)))
+    : 0;
 
   // Pagination logic
   const totalPages = Math.ceil(expenses.length / itemsPerPage);
@@ -270,98 +266,96 @@ const Expenses = ({ readOnly = false }) => {
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: '20px', marginBottom: '20px' }}>
-        <div className="card">
-          <div className="card-header">
-            <div className="card-header-content">
-              <h2>Expenses</h2>
-              {!readOnly && (
-                <button className="btn btn-primary" onClick={() => { setEditingExpense(null); setModalOpen(true); }}>
-                  + Add Expense
-                </button>
-              )}
-            </div>
-          </div>
-          <div className="table-container">
-            <table className="expenses-table">
-              <thead>
-                <tr>
-                  <th>Category</th>
-                  <th>Amount</th>
-                  <th>Payment Method</th>
-                  <th>Notes</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {paginatedExpenses.length === 0 ? (
-                  <tr><td colSpan="5" className="empty-state">No expenses found for the selected date range</td></tr>
-                ) : (
-                  paginatedExpenses.map(expense => (
-                    <tr key={expense.expense_id}>
-                      <td><strong>{expense.expense_category}</strong></td>
-                      <td>{formatCurrency(expense.amount)}</td>
-                      <td>{expense.payment_method}</td>
-                      <td>{expense.notes || '-'}</td>
-                      <td>
-                        {!readOnly && (
-                          <>
-                            <button className="btn-edit" onClick={() => { setEditingExpense(expense); setModalOpen(true); }}>Edit</button>
-                            <button className="btn-delete" onClick={() => handleDelete(expense.expense_id)}>Delete</button>
-                          </>
-                        )}
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-              <tfoot>
-                <tr>
-                  <td><strong>Total:</strong></td>
-                  <td><strong>{formatCurrency(totalToday)}</strong></td>
-                  <td colSpan="3"></td>
-                </tr>
-              </tfoot>
-            </table>
-          </div>
-          
-          {expenses.length > 0 && (
-            <Pagination
-              currentPage={currentPage}
-              totalPages={totalPages}
-              itemsPerPage={itemsPerPage}
-              totalItems={expenses.length}
-              onPageChange={setCurrentPage}
-              onItemsPerPageChange={(newItemsPerPage) => {
-                setItemsPerPage(newItemsPerPage);
-                setCurrentPage(1);
-              }}
-            />
-          )}
+      {/* Statistics Cards Section - Essential Metrics */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px', marginBottom: '20px' }}>
+        <div className="card" style={{ background: '#3b82f6', color: 'white', padding: '16px' }}>
+          <div style={{ fontSize: '13px', opacity: 0.95, marginBottom: '6px' }}>Number of Expenses</div>
+          <div style={{ fontSize: '28px', fontWeight: 'bold' }}>{totalExpenses}</div>
         </div>
 
-        <div className="card">
-          <div className="card-header">
-            <h2>Summary by Category</h2>
-          </div>
-          <div style={{ padding: '16px' }}>
-            {summary.length === 0 ? (
-              <p style={{ color: '#94a3b8' }}>No expenses</p>
-            ) : (
-              summary.map(item => (
-                <div key={item.expense_category} style={{ marginBottom: '12px', paddingBottom: '12px', borderBottom: '1px solid #e2e8f0' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ fontWeight: '500' }}>{item.expense_category}</span>
-                    <span style={{ fontWeight: '600', color: '#dc2626' }}>{formatCurrency(item.total_amount)}</span>
-                  </div>
-                  <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '4px' }}>
-                    {item.expense_count} expense(s)
-                  </div>
-                </div>
-              ))
+        <div className="card" style={{ background: '#ef4444', color: 'white', padding: '16px' }}>
+          <div style={{ fontSize: '13px', opacity: 0.95, marginBottom: '6px' }}>Total Expense Amount</div>
+          <div style={{ fontSize: '28px', fontWeight: 'bold' }}>{formatCurrency(totalAmount)}</div>
+        </div>
+
+        <div className="card" style={{ background: '#10b981', color: 'white', padding: '16px' }}>
+          <div style={{ fontSize: '13px', opacity: 0.95, marginBottom: '6px' }}>Average Expense</div>
+          <div style={{ fontSize: '28px', fontWeight: 'bold' }}>{formatCurrency(averageAmount)}</div>
+        </div>
+
+        <div className="card" style={{ background: '#f59e0b', color: 'white', padding: '16px' }}>
+          <div style={{ fontSize: '13px', opacity: 0.95, marginBottom: '6px' }}>Highest Expense</div>
+          <div style={{ fontSize: '28px', fontWeight: 'bold' }}>{formatCurrency(highestExpense)}</div>
+        </div>
+      </div>
+
+      <div className="card" style={{ marginBottom: '20px' }}>
+        <div className="card-header">
+          <div className="card-header-content">
+            <h2>Expenses</h2>
+            {!readOnly && (
+              <button className="btn btn-primary" onClick={() => { setEditingExpense(null); setModalOpen(true); }}>
+                + Add Expense
+              </button>
             )}
           </div>
         </div>
+        <div className="table-container">
+          <table className="expenses-table">
+            <thead>
+              <tr>
+                <th>Expense Name</th>
+                <th>Amount</th>
+                <th>Payment Method</th>
+                <th>Notes</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {paginatedExpenses.length === 0 ? (
+                <tr><td colSpan="5" className="empty-state">No expenses found for the selected date range</td></tr>
+              ) : (
+                paginatedExpenses.map(expense => (
+                  <tr key={expense.expense_id}>
+                    <td><strong>{expense.expense_category}</strong></td>
+                    <td>{formatCurrency(expense.amount)}</td>
+                    <td>{expense.payment_method}</td>
+                    <td>{expense.notes || '-'}</td>
+                    <td>
+                      {!readOnly && (
+                        <>
+                          <button className="btn-edit" onClick={() => { setEditingExpense(expense); setModalOpen(true); }}>Edit</button>
+                          <button className="btn-delete" onClick={() => handleDelete(expense.expense_id)}>Delete</button>
+                        </>
+                      )}
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+            <tfoot>
+              <tr>
+                <td><strong>Total:</strong></td>
+                <td><strong>{formatCurrency(totalToday)}</strong></td>
+                <td colSpan="3"></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+        
+        {expenses.length > 0 && (
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            itemsPerPage={itemsPerPage}
+            totalItems={expenses.length}
+            onPageChange={setCurrentPage}
+            onItemsPerPageChange={(newItemsPerPage) => {
+              setItemsPerPage(newItemsPerPage);
+              setCurrentPage(1);
+            }}
+          />
+        )}
       </div>
 
       {modalOpen && (
@@ -411,7 +405,7 @@ const ExpenseModal = ({ expense, date, onSave, onClose }) => {
         </div>
         <form onSubmit={handleSubmit} className="modal-content">
           <div className="form-group">
-            <label className="form-label">Category *</label>
+            <label className="form-label">Expense Name *</label>
             <input className="form-input" required value={formData.expense_category} onChange={(e) => setFormData({...formData, expense_category: e.target.value})} placeholder="e.g., Rent, Utilities, Supplies" />
           </div>
           <div className="form-row">
