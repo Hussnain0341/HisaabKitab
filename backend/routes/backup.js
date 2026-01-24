@@ -123,18 +123,28 @@ router.post('/restore', async (req, res) => {
   try {
     const { filename } = req.body;
     
+    console.log('[Backup Route] Restore request received:', { filename });
+    
     if (!filename) {
       // Get most recent backup
+      console.log('[Backup Route] No filename provided, getting most recent backup...');
       const mostRecent = await backupService.getMostRecentBackup();
+      
       if (!mostRecent) {
+        console.log('[Backup Route] No backup found');
         return res.status(400).json({
           success: false,
           error: 'No backup found to restore',
+          message: 'No backup files found. Please create a backup first.',
         });
       }
       
+      console.log('[Backup Route] Most recent backup:', mostRecent);
+      
       // Restore most recent backup
       await backupService.restoreBackup(mostRecent);
+      
+      console.log('[Backup Route] Restore completed successfully');
       
       res.json({
         success: true,
@@ -144,7 +154,11 @@ router.post('/restore', async (req, res) => {
       });
     } else {
       // Restore specific backup
+      console.log('[Backup Route] Restoring specific backup:', filename);
+      
       await backupService.restoreBackup(filename);
+      
+      console.log('[Backup Route] Restore completed successfully');
       
       res.json({
         success: true,
@@ -154,11 +168,19 @@ router.post('/restore', async (req, res) => {
       });
     }
   } catch (error) {
-    console.error('Error restoring backup:', error);
+    console.error('[Backup Route] Error restoring backup:', error);
+    console.error('[Backup Route] Error details:', {
+      message: error.message,
+      stack: error.stack,
+      stderr: error.stderr,
+      stdout: error.stdout,
+    });
+    
     res.status(500).json({
       success: false,
       error: 'Failed to restore backup',
-      message: error.message,
+      message: error.message || 'An unknown error occurred during restore',
+      details: error.stderr || error.stdout || undefined,
     });
   }
 });

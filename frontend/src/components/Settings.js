@@ -180,23 +180,36 @@ const Settings = ({ readOnly = false }) => {
     try {
       setRestoring(true);
       setError(null);
+      setSuccess(null);
       
+      console.log('[Settings] Starting restore operation...');
       const response = await backupAPI.restore();
       
+      console.log('[Settings] Restore response:', response);
+      
       if (response.data.success) {
-        alert(t('backup.restoreSuccess'));
+        setSuccess(t('backup.restoreSuccess'));
+        console.log('[Settings] Restore successful, preparing to restart...');
+        
+        // Small delay to show success message
+        await new Promise(resolve => setTimeout(resolve, 1000));
         
         // Restart Electron app if available
         if (window.electronAPI && window.electronAPI.restartApp) {
+          console.log('[Settings] Restarting Electron app...');
           window.electronAPI.restartApp();
         } else {
           // Fallback: reload page
+          console.log('[Settings] Reloading page...');
           window.location.reload();
         }
+      } else {
+        throw new Error(response.data.error || t('backup.restoreFailed'));
       }
     } catch (err) {
-      console.error('Error restoring backup:', err);
-      setError(err.response?.data?.error || t('backup.restoreFailed'));
+      console.error('[Settings] Error restoring backup:', err);
+      const errorMessage = err.response?.data?.message || err.response?.data?.error || err.message || t('backup.restoreFailed');
+      setError(errorMessage);
       setRestoring(false);
     }
   };

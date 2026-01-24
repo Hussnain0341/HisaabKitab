@@ -596,20 +596,31 @@ async function listBackups() {
  * Restore database from backup file
  */
 async function restoreBackup(backupFilename) {
+  console.log(`[Backup Service] Starting restore from: ${backupFilename}`);
+  
   const settings = await getBackupSettings();
   const backupDir = settings.backupDir;
   const backupPath = path.join(backupDir, backupFilename);
   
+  console.log(`[Backup Service] Backup directory: ${backupDir}`);
+  console.log(`[Backup Service] Backup file path: ${backupPath}`);
+  
   // Verify backup file exists
   if (!(await fileExists(backupPath))) {
-    throw new Error('Backup file not found');
+    const error = new Error(`Backup file not found: ${backupPath}`);
+    console.error(`[Backup Service] ${error.message}`);
+    throw error;
   }
   
   // Verify file is not empty
   const stats = await fs.stat(backupPath);
   if (stats.size === 0) {
-    throw new Error('Backup file is empty');
+    const error = new Error(`Backup file is empty: ${backupPath}`);
+    console.error(`[Backup Service] ${error.message}`);
+    throw error;
   }
+  
+  console.log(`[Backup Service] Backup file size: ${stats.size} bytes`);
   
   const dbConfig = {
     host: process.env.DB_HOST || 'localhost',
@@ -619,9 +630,10 @@ async function restoreBackup(backupFilename) {
     password: process.env.DB_PASSWORD || 'postgres',
   };
   
+  const originalPgPassword = process.env.PGPASSWORD;
+  
   try {
     // Set PGPASSWORD
-    const originalPgPassword = process.env.PGPASSWORD;
     process.env.PGPASSWORD = dbConfig.password;
     
     // Note: We do NOT close the pool here because it's shared across the entire app.
@@ -631,25 +643,51 @@ async function restoreBackup(backupFilename) {
     
     // Build psql restore command
     const psqlCmdPath = await getPsqlPath();
+    console.log(`[Backup Service] Using psql path: ${psqlCmdPath}`);
+    
     // Only quote if it's a full path (absolute path or contains directory separators), otherwise use as-is
     const isFullPath = path.isAbsolute(psqlCmdPath) || psqlCmdPath.includes('\\') || psqlCmdPath.includes('/');
+    
+    // Quote backup path if it contains spaces
+    const quotedBackupPath = backupPath.includes(' ') ? `"${backupPath}"` : backupPath;
+    
     const psqlCmd = isFullPath
-      ? `"${psqlCmdPath}" -h ${dbConfig.host} -p ${dbConfig.port} -U ${dbConfig.user} -d ${dbConfig.database} -f "${backupPath}" --no-password`
-      : `${psqlCmdPath} -h ${dbConfig.host} -p ${dbConfig.port} -U ${dbConfig.user} -d ${dbConfig.database} -f "${backupPath}" --no-password`;
+      ? `"${psqlCmdPath}" -h ${dbConfig.host} -p ${dbConfig.port} -U ${dbConfig.user} -d ${dbConfig.database} -f ${quotedBackupPath} --no-password`
+      : `${psqlCmdPath} -h ${dbConfig.host} -p ${dbConfig.port} -U ${dbConfig.user} -d ${dbConfig.database} -f ${quotedBackupPath} --no-password`;
     
-    // Execute restore
-    await execPromise(psqlCmd);
+    console.log(`[Backup Service] Executing restore command...`);
     
-    // Log restore success
-    await logBackupOperation('backup_restore', 'success', {
-      filename: backupFilename,
+    // Execute restore with timeout
+    const { stdout, stderr } = await execPromise(psqlCmd, {
+      maxBuffer: 10 * 1024 * 1024, // 10MB buffer
+      timeout: 300000, // 5 minute timeout
     });
+    
+    if (stdout) {
+      console.log(`[Backup Service] psql stdout: ${stdout}`);
+    }
+    if (stderr) {
+      console.warn(`[Backup Service] psql stderr: ${stderr}`);
+    }
+    
+    console.log(`[Backup Service] Restore completed successfully`);
+    
+    // Log restore success (don't let logging errors break the restore)
+    try {
+      await logBackupOperation('backup_restore', 'success', {
+        filename: backupFilename,
+      });
+    } catch (logError) {
+      console.warn(`[Backup Service] Failed to log restore success: ${logError.message}`);
+    }
     
     return {
       success: true,
       message: 'Database restored successfully',
     };
   } catch (error) {
+    console.error(`[Backup Service] Restore failed:`, error);
+    
     // Restore original PGPASSWORD
     if (originalPgPassword !== undefined) {
       process.env.PGPASSWORD = originalPgPassword;
@@ -657,13 +695,30 @@ async function restoreBackup(backupFilename) {
       delete process.env.PGPASSWORD;
     }
     
-    // Log restore failure
-    await logBackupOperation('backup_restore', 'failed', {
-      filename: backupFilename,
-      error: error.message,
-    });
+    // Log restore failure (don't let logging errors mask the original error)
+    try {
+      await logBackupOperation('backup_restore', 'failed', {
+        filename: backupFilename,
+        error: error.message,
+        stderr: error.stderr || '',
+        stdout: error.stdout || '',
+      });
+    } catch (logError) {
+      console.warn(`[Backup Service] Failed to log restore failure: ${logError.message}`);
+    }
     
-    throw error;
+    // Provide more detailed error message
+    let errorMessage = error.message || 'Unknown error occurred during restore';
+    if (error.stderr) {
+      errorMessage += `\nDetails: ${error.stderr}`;
+    }
+    if (error.stdout) {
+      errorMessage += `\nOutput: ${error.stdout}`;
+    }
+    
+    const restoreError = new Error(errorMessage);
+    restoreError.originalError = error;
+    throw restoreError;
   }
 }
 
