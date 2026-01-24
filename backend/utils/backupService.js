@@ -81,6 +81,8 @@ function getDefaultBackupSettings() {
  */
 async function saveBackupSettings(settings) {
   try {
+    console.log('[Backup Service] Saving backup settings:', settings);
+    
     // First, ensure only one record exists
     await db.query(`
       DELETE FROM settings 
@@ -95,22 +97,29 @@ async function saveBackupSettings(settings) {
     
     let otherAppSettings = {};
     if (result.rows.length > 0) {
-      otherAppSettings = result.rows[0].other_app_settings || {};
+      const existingSettings = result.rows[0].other_app_settings;
+      if (typeof existingSettings === 'string') {
+        otherAppSettings = JSON.parse(existingSettings);
+      } else {
+        otherAppSettings = existingSettings || {};
+      }
     }
     
-    // Merge backup_config with existing settings
+    // Merge backup_config with existing settings (preserve other settings)
     otherAppSettings.backup_config = {
-      enabled: settings.enabled,
-      mode: settings.mode,
-      scheduledTime: settings.scheduledTime,
-      backupDir: settings.backupDir,
-      retentionCount: settings.retentionCount,
+      enabled: settings.enabled !== undefined ? settings.enabled : true,
+      mode: settings.mode || 'scheduled',
+      scheduledTime: settings.scheduledTime || '02:00',
+      backupDir: settings.backupDir || DEFAULT_BACKUP_DIR,
+      retentionCount: settings.retentionCount !== undefined ? settings.retentionCount : 5,
     };
+    
+    console.log('[Backup Service] Merged other_app_settings:', otherAppSettings);
     
     // Update the single record
     const updateResult = await db.query(
       `UPDATE settings 
-       SET other_app_settings = $1, updated_at = CURRENT_TIMESTAMP
+       SET other_app_settings = $1
        WHERE id = (SELECT id FROM settings ORDER BY id LIMIT 1)
        RETURNING *`,
       [JSON.stringify(otherAppSettings)]
@@ -118,6 +127,7 @@ async function saveBackupSettings(settings) {
     
     // If no record exists, create one
     if (updateResult.rows.length === 0) {
+      console.log('[Backup Service] No settings record found, creating new one...');
       await db.query(
         `INSERT INTO settings (printer_config, language, other_app_settings)
          VALUES (NULL, 'en', $1)
@@ -126,9 +136,11 @@ async function saveBackupSettings(settings) {
       );
     }
     
+    console.log('[Backup Service] Backup settings saved successfully');
     return true;
   } catch (error) {
     console.error('[Backup Service] Error saving backup settings:', error);
+    console.error('[Backup Service] Error stack:', error.stack);
     return false;
   }
 }

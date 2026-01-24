@@ -59,21 +59,33 @@ router.post('/create', async (req, res) => {
  */
 router.put('/settings', async (req, res) => {
   try {
+    console.log('[Backup Route] Update settings request:', req.body);
+    
+    // Get current settings first to preserve existing values
+    const currentSettings = await backupService.getBackupSettings();
+    
     const { enabled, mode, scheduledTime, backupDir, retentionCount } = req.body;
     
+    // Merge with current settings to preserve values that aren't being updated
     const settings = {
-      enabled: enabled !== undefined ? enabled : true,
-      mode: mode || 'scheduled',
-      scheduledTime: scheduledTime || '02:00',
-      backupDir: backupDir || backupService.DEFAULT_BACKUP_DIR,
-      retentionCount: retentionCount || 5,
+      enabled: enabled !== undefined ? enabled : currentSettings.enabled,
+      mode: mode !== undefined ? mode : currentSettings.mode,
+      scheduledTime: scheduledTime !== undefined ? scheduledTime : currentSettings.scheduledTime,
+      backupDir: backupDir !== undefined ? backupDir : currentSettings.backupDir,
+      retentionCount: retentionCount !== undefined ? retentionCount : currentSettings.retentionCount,
     };
+    
+    console.log('[Backup Route] Merged settings to save:', settings);
     
     const saved = await backupService.saveBackupSettings(settings);
     
     if (saved) {
+      console.log('[Backup Route] Settings saved, updating scheduler...');
+      
       // Update scheduler
       await backupScheduler.updateScheduler();
+      
+      console.log('[Backup Route] Scheduler updated successfully');
       
       res.json({
         success: true,
@@ -81,13 +93,14 @@ router.put('/settings', async (req, res) => {
         settings,
       });
     } else {
+      console.error('[Backup Route] Failed to save backup settings');
       res.status(500).json({
         success: false,
         error: 'Failed to save backup settings',
       });
     }
   } catch (error) {
-    console.error('Error updating backup settings:', error);
+    console.error('[Backup Route] Error updating backup settings:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to update backup settings',

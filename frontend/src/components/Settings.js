@@ -31,6 +31,7 @@ const Settings = ({ readOnly = false }) => {
     retentionCount: 5,
   });
   const [restoring, setRestoring] = useState(false);
+  const [backupSettingsSaving, setBackupSettingsSaving] = useState(false);
 
   useEffect(() => {
     fetchSettings();
@@ -142,12 +143,15 @@ const Settings = ({ readOnly = false }) => {
     }
   };
 
-  const fetchBackupStatus = async () => {
+  const fetchBackupStatus = async (skipStateUpdate = false) => {
     try {
       const response = await backupAPI.status();
       if (response.data.success) {
         setBackupStatus(response.data.lastBackup);
-        setBackupSettings(response.data.settings);
+        // Only update backup settings if not currently saving (to prevent overwriting user changes)
+        if (!skipStateUpdate && !backupSettingsSaving) {
+          setBackupSettings(response.data.settings);
+        }
       }
     } catch (err) {
       console.error('Error fetching backup status:', err);
@@ -155,18 +159,39 @@ const Settings = ({ readOnly = false }) => {
   };
 
   const handleBackupSettingsChange = async (changes) => {
+    console.log('[Settings] Backup settings change requested:', changes);
+    
+    // Update local state immediately for responsive UI
     const newSettings = { ...backupSettings, ...changes };
     setBackupSettings(newSettings);
+    setBackupSettingsSaving(true);
+    setError(null);
     
     try {
-      await backupAPI.updateSettings(newSettings);
-      setSuccess(t('backup.settingsSaved'));
-      setTimeout(() => setSuccess(null), 3000);
+      console.log('[Settings] Saving backup settings:', newSettings);
+      const response = await backupAPI.updateSettings(newSettings);
+      
+      if (response.data.success) {
+        console.log('[Settings] Backup settings saved successfully');
+        setSuccess(t('backup.settingsSaved'));
+        setTimeout(() => setSuccess(null), 3000);
+        
+        // Refresh backup status after successful save (but don't overwrite state since we just saved)
+        // Small delay to ensure DB is updated
+        setTimeout(async () => {
+          await fetchBackupStatus(true); // Skip state update since we already have the correct state
+          setBackupSettingsSaving(false);
+        }, 300);
+      } else {
+        throw new Error(response.data.error || t('backup.settingsFailed'));
+      }
     } catch (err) {
-      console.error('Error saving backup settings:', err);
-      setError(err.response?.data?.error || t('backup.settingsFailed'));
-      // Revert on error
-      await fetchBackupStatus();
+      console.error('[Settings] Error saving backup settings:', err);
+      setError(err.response?.data?.error || err.message || t('backup.settingsFailed'));
+      
+      // Revert to last known good state from server
+      await fetchBackupStatus(false);
+      setBackupSettingsSaving(false);
     }
   };
 
@@ -722,14 +747,19 @@ const Settings = ({ readOnly = false }) => {
                   <label className="form-label">{t('backup.backupMode')}</label>
                   <select
                     className="form-input"
-                    value={backupSettings.mode}
-                    onChange={(e) => handleBackupSettingsChange({ mode: e.target.value })}
+                    value={backupSettings.mode || 'scheduled'}
+                    onChange={(e) => {
+                      console.log('[Settings] Backup mode changed to:', e.target.value);
+                      handleBackupSettingsChange({ mode: e.target.value });
+                    }}
+                    disabled={backupSettingsSaving}
                   >
                     <option value="app_start">{t('backup.modeAppStart')}</option>
                     <option value="scheduled">{t('backup.modeScheduled')}</option>
                   </select>
                   <small className="form-help">
                     {t('backup.backupModeDesc')}
+                    {backupSettingsSaving && <span style={{ color: '#059669', marginLeft: '8px' }}>💾 Saving...</span>}
                   </small>
                 </div>
 
@@ -740,12 +770,17 @@ const Settings = ({ readOnly = false }) => {
                     <input
                       type="time"
                       className="form-input"
-                      value={backupSettings.scheduledTime}
-                      onChange={(e) => handleBackupSettingsChange({ scheduledTime: e.target.value })}
+                      value={backupSettings.scheduledTime || '02:00'}
+                      onChange={(e) => {
+                        console.log('[Settings] Scheduled time changed to:', e.target.value);
+                        handleBackupSettingsChange({ scheduledTime: e.target.value });
+                      }}
+                      disabled={backupSettingsSaving}
                       style={{ maxWidth: '200px' }}
                     />
                     <small className="form-help">
                       {t('backup.scheduledTimeDesc')}
+                      {backupSettingsSaving && <span style={{ color: '#059669', marginLeft: '8px' }}>💾 Saving...</span>}
                     </small>
                   </div>
                 )}
@@ -791,8 +826,12 @@ const Settings = ({ readOnly = false }) => {
                   <label className="form-label">{t('backup.retention')}</label>
                   <select
                     className="form-input"
-                    value={backupSettings.retentionCount}
-                    onChange={(e) => handleBackupSettingsChange({ retentionCount: parseInt(e.target.value) })}
+                    value={backupSettings.retentionCount || 5}
+                    onChange={(e) => {
+                      console.log('[Settings] Retention count changed to:', e.target.value);
+                      handleBackupSettingsChange({ retentionCount: parseInt(e.target.value) });
+                    }}
+                    disabled={backupSettingsSaving}
                     style={{ maxWidth: '200px' }}
                   >
                     <option value="3">{t('backup.retention3')}</option>
@@ -802,6 +841,7 @@ const Settings = ({ readOnly = false }) => {
                   </select>
                   <small className="form-help">
                     {t('backup.retentionDesc')}
+                    {backupSettingsSaving && <span style={{ color: '#059669', marginLeft: '8px' }}>💾 Saving...</span>}
                   </small>
                 </div>
               </>
@@ -854,20 +894,26 @@ const Settings = ({ readOnly = false }) => {
                   try {
                     setBackupCreating(true);
                     setError(null);
+                    setSuccess(null);
+                    console.log('[Settings] Creating manual backup...');
                     const response = await backupAPI.create();
                     if (response.data.success) {
+                      console.log('[Settings] Manual backup created successfully');
                       setSuccess(t('backup.backupCreated', { filename: response.data.filename }));
                       setTimeout(() => setSuccess(null), 5000);
-                      await fetchBackupStatus();
+                      // Refresh backup status after successful backup
+                      await fetchBackupStatus(false);
+                    } else {
+                      throw new Error(response.data.error || t('backup.backupFailed'));
                     }
                   } catch (err) {
-                    console.error('Error creating backup:', err);
-                    setError(err.response?.data?.error || t('backup.backupFailed'));
+                    console.error('[Settings] Error creating backup:', err);
+                    setError(err.response?.data?.error || err.message || t('backup.backupFailed'));
                   } finally {
                     setBackupCreating(false);
                   }
                 }}
-                disabled={backupCreating}
+                disabled={backupCreating || backupSettingsSaving}
               >
                 {backupCreating ? t('backup.creating') : `💾 ${t('backup.createManual')}`}
               </button>
