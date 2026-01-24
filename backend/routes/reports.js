@@ -1,6 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../db');
+// Removed checkFeature - allow all API calls, frontend handles operation blocking
+
+// Helper function to get date range for periods
 
 // Helper function to get date range for periods
 function getDateRange(period) {

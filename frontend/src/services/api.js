@@ -151,6 +151,15 @@ export const customerPaymentsAPI = {
 export const backupAPI = {
   create: () => api.post('/backup/create'),
   list: () => api.get('/backup/list'),
+  status: () => api.get('/backup/status'),
+  restore: (filename = null) => api.post('/backup/restore', { filename }),
+  updateSettings: (settings) => api.put('/backup/settings', settings),
+};
+
+// Setup API
+export const setupAPI = {
+  check: () => api.get('/setup/check'),
+  migrate: () => api.post('/setup/migrate'),
 };
 
 export default api;

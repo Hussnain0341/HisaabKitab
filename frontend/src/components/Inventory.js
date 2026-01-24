@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { productsAPI, suppliersAPI, categoriesAPI } from '../services/api';
 import ProductModal from './ProductModal';
 import Pagination from './Pagination';
 import './Inventory.css';
 
 const Inventory = ({ readOnly = false }) => {
+  const { t } = useTranslation();
   const [products, setProducts] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -172,7 +174,7 @@ const Inventory = ({ readOnly = false }) => {
       setDeleteConfirm(null);
     } catch (err) {
       console.error('Error deleting product:', err);
-      alert(err.response?.data?.error || 'Failed to delete product');
+      alert(err.response?.data?.error || t('inventory.productFailed'));
     }
   };
 
@@ -214,7 +216,7 @@ const Inventory = ({ readOnly = false }) => {
   if (loading) {
     return (
       <div className="content-container">
-        <div className="loading">Loading inventory...</div>
+        <div className="loading">{t('common.loading')} {t('inventory.title').toLowerCase()}...</div>
       </div>
     );
   }
@@ -222,8 +224,8 @@ const Inventory = ({ readOnly = false }) => {
   return (
     <div className="content-container">
       <div className="page-header">
-        <h1 className="page-title">Inventory</h1>
-        <p className="page-subtitle">Manage your shop's products and stock</p>
+        <h1 className="page-title">{t('inventory.title')}</h1>
+        <p className="page-subtitle">{t('inventory.subtitle')}</p>
       </div>
 
       {error && (
@@ -236,18 +238,18 @@ const Inventory = ({ readOnly = false }) => {
       <div className="card" style={{ marginBottom: '20px' }}>
         <div style={{ padding: '16px', display: 'flex', gap: '12px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
           <div style={{ flex: 1, minWidth: '250px' }}>
-            <label className="form-label" style={{ marginBottom: '8px', display: 'block', fontSize: '13px' }}>Search Products</label>
+            <label className="form-label" style={{ marginBottom: '8px', display: 'block', fontSize: '13px' }}>{t('inventory.searchProducts')}</label>
             <input
               type="text"
               className="form-input"
-              placeholder="Search by product name..."
+              placeholder={t('inventory.searchProducts')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               style={{ fontSize: '14px', width: '100%' }}
             />
           </div>
           <div style={{ flex: 1, minWidth: '200px' }}>
-            <label className="form-label" style={{ marginBottom: '8px', display: 'block', fontSize: '13px' }}>Category</label>
+            <label className="form-label" style={{ marginBottom: '8px', display: 'block', fontSize: '13px' }}>{t('inventory.category')}</label>
             <select 
               className="form-input" 
               value={selectedCategory || ''} 
@@ -256,7 +258,7 @@ const Inventory = ({ readOnly = false }) => {
               }}
               style={{ fontSize: '14px' }}
             >
-              <option value="">All Categories</option>
+              <option value="">{t('inventory.allCategories')}</option>
               {categories.filter(c => c.status === 'active').map(cat => (
                 <option key={cat.category_id} value={cat.category_id}>{cat.category_name}</option>
               ))}
@@ -270,7 +272,7 @@ const Inventory = ({ readOnly = false }) => {
                 onChange={(e) => setShowFrequentlySoldOnly(e.target.checked)}
                 style={{ marginRight: '6px', width: '16px', height: '16px' }}
               />
-              Frequently Sold Only
+              {t('inventory.frequentlySoldOnly')}
             </label>
             {(selectedCategory || showFrequentlySoldOnly || searchQuery) && (
               <button className="btn btn-secondary" onClick={() => {
@@ -278,7 +280,7 @@ const Inventory = ({ readOnly = false }) => {
                 setShowFrequentlySoldOnly(false);
                 setSearchQuery('');
               }}>
-                Clear Filters
+                {t('common.clearFilters')}
               </button>
             )}
           </div>
@@ -288,14 +290,14 @@ const Inventory = ({ readOnly = false }) => {
       <div className="card">
         <div className="card-header">
           <div className="card-header-content">
-            <h2>Products</h2>
+            <h2>{t('menu.products')}</h2>
             {!readOnly && (
               <button className="btn btn-primary" onClick={handleAdd}>
-                + Add Product
+                + {t('inventory.addProduct')}
               </button>
             )}
             {readOnly && (
-              <span className="read-only-notice">Read-only mode: Editing disabled</span>
+              <span className="read-only-notice">{t('common.readOnlyMode')}</span>
             )}
           </div>
         </div>
@@ -305,23 +307,23 @@ const Inventory = ({ readOnly = false }) => {
             <thead>
               <tr>
                 <th onClick={() => handleSort('name')} className="sortable">
-                  Product Name {getSortIcon('name')}
+                  {t('inventory.productName')} {getSortIcon('name')}
                 </th>
-                <th>Category</th>
-                <th>Purchase Price</th>
-                <th>Selling Price</th>
+                <th>{t('inventory.category')}</th>
+                <th>{t('inventory.purchasePrice')}</th>
+                <th>{t('inventory.sellingPrice')}</th>
                 <th onClick={() => handleSort('quantity_in_stock')} className="sortable">
-                  Quantity in Stock {getSortIcon('quantity_in_stock')}
+                  {t('inventory.stock')} {getSortIcon('quantity_in_stock')}
                 </th>
-                <th>Supplier</th>
-                <th>Actions</th>
+                <th>{t('suppliers.title')}</th>
+                <th>{t('common.actions')}</th>
               </tr>
             </thead>
             <tbody>
               {paginatedProducts.length === 0 ? (
                 <tr>
                   <td colSpan="7" className="empty-state">
-                    {searchQuery ? `No products found matching "${searchQuery}".` : 'No products found. Click "Add Product" to get started.'}
+                    {searchQuery ? t('inventory.noProductsMatching', { query: searchQuery }) : t('inventory.noProducts')}
                   </td>
                 </tr>
               ) : (
@@ -345,10 +347,10 @@ const Inventory = ({ readOnly = false }) => {
                     <td>
                       <div>{formatCurrency(retailPrice)}</div>
                       {wholesalePrice !== retailPrice && (
-                        <div style={{ fontSize: '11px', color: '#64748b' }}>Wh: {formatCurrency(wholesalePrice)}</div>
+                        <div style={{ fontSize: '11px', color: '#64748b' }}>{t('billing.wholesale')}: {formatCurrency(wholesalePrice)}</div>
                       )}
                       {product.special_price && (
-                        <div style={{ fontSize: '11px', color: '#dc2626' }}>Sp: {formatCurrency(product.special_price)}</div>
+                        <div style={{ fontSize: '11px', color: '#dc2626' }}>{t('billing.special')}: {formatCurrency(product.special_price)}</div>
                       )}
                     </td>
                     <td className={product.quantity_in_stock === 0 ? 'low-stock' : ''}>
@@ -362,17 +364,17 @@ const Inventory = ({ readOnly = false }) => {
                             className="btn-edit"
                             onClick={() => handleEdit(product)}
                           >
-                            Edit
+                            {t('common.edit')}
                           </button>
                           <button
                             className="btn-delete"
                             onClick={() => setDeleteConfirm(product.product_id)}
                           >
-                            Delete
+                            {t('common.delete')}
                           </button>
                         </>
                       ) : (
-                        <span className="read-only-label">View Only</span>
+                        <span className="read-only-label">{t('common.viewOnly')}</span>
                       )}
                     </td>
                   </tr>
@@ -401,17 +403,17 @@ const Inventory = ({ readOnly = false }) => {
       {deleteConfirm && (
         <div className="modal-overlay" onClick={() => setDeleteConfirm(null)}>
           <div className="modal delete-modal" onClick={(e) => e.stopPropagation()}>
-            <h3>Confirm Delete</h3>
-            <p>Are you sure you want to delete this product? This action cannot be undone.</p>
+            <h3>{t('common.confirmDelete')}</h3>
+            <p>{t('inventory.deleteConfirm')} {t('common.cannotBeUndone')}</p>
             <div className="modal-actions">
               <button className="btn btn-secondary" onClick={() => setDeleteConfirm(null)}>
-                Cancel
+                {t('common.cancel')}
               </button>
               <button
                 className="btn btn-danger"
                 onClick={() => handleDelete(deleteConfirm)}
               >
-                Delete
+                {t('common.delete')}
               </button>
             </div>
           </div>

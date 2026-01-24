@@ -18,4 +18,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Settings/storage API (optional, for local storage of printer settings)
   setStoreValue: (key, value) => ipcRenderer.invoke('set-store-value', key, value),
   getStoreValue: (key) => ipcRenderer.invoke('get-store-value', key),
+  
+  // Directory selection API for backup location
+  selectDirectory: () => ipcRenderer.invoke('select-directory'),
 });

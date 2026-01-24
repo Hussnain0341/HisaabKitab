@@ -6,6 +6,177 @@
   background-color: #f8fafc;
 }
 
+/* CRITICAL: Global button disabling when license is not activated */
+/* Disable ALL buttons (Add, Edit, Delete, View, Save, Update, Print, etc.) */
+/* EXCLUDE: Settings page, navigation menu items, license banner links, tabs, and buttons with data-allow-disabled */
+.app.operations-disabled button:not(.menu-item):not(.license-banner-link):not(.tab):not([data-allow-disabled]):not([data-navigation]),
+.app.operations-disabled .btn:not(.menu-item):not(.license-banner-link):not(.tab):not([data-allow-disabled]):not([data-navigation]),
+.app.operations-disabled .btn-primary:not(.menu-item):not(.license-banner-link):not(.tab):not([data-allow-disabled]):not([data-navigation]),
+.app.operations-disabled .btn-edit:not(.menu-item):not(.license-banner-link):not(.tab):not([data-allow-disabled]):not([data-navigation]),
+.app.operations-disabled .btn-delete:not(.menu-item):not(.license-banner-link):not(.tab):not([data-allow-disabled]):not([data-navigation]),
+.app.operations-disabled .btn-view:not(.menu-item):not(.license-banner-link):not(.tab):not([data-allow-disabled]):not([data-navigation]),
+.app.operations-disabled .btn-danger:not(.menu-item):not(.license-banner-link):not(.tab):not([data-allow-disabled]):not([data-navigation]),
+.app.operations-disabled .btn-secondary:not(.menu-item):not(.license-banner-link):not(.tab):not([data-allow-disabled]):not([data-navigation]),
+.app.operations-disabled input[type="button"]:not(.menu-item):not(.license-banner-link):not(.tab):not([data-allow-disabled]):not([data-navigation]),
+.app.operations-disabled input[type="submit"]:not(.menu-item):not(.license-banner-link):not(.tab):not([data-allow-disabled]):not([data-navigation]) {
+  opacity: 0.5 !important;
+  cursor: not-allowed !important;
+  pointer-events: none !important;
+  position: relative;
+  user-select: none !important;
+  -webkit-user-select: none !important;
+  -moz-user-select: none !important;
+  -ms-user-select: none !important;
+  background-color: #e0e0e0 !important;
+  color: #999 !important;
+}
+
+/* CRITICAL: EXCLUDE Settings page from disabling - allow all Settings functionality */
+/* These rules MUST come after the general disabling rules and use higher specificity */
+/* ONLY apply to Settings page elements - use specific selectors */
+.app.operations-disabled .settings-form button:not([disabled]),
+.app.operations-disabled .settings-form .btn:not([disabled]),
+.app.operations-disabled .settings-form .btn-primary:not([disabled]),
+.app.operations-disabled .settings-form .btn-secondary:not([disabled]),
+.app.operations-disabled .settings-form .btn-danger:not([disabled]),
+.app.operations-disabled .settings-form input:not([disabled]):not([readonly]),
+.app.operations-disabled .settings-form textarea:not([disabled]):not([readonly]),
+.app.operations-disabled .settings-form select:not([disabled]),
+.app.operations-disabled .settings-actions button:not([disabled]),
+.app.operations-disabled .settings-actions .btn:not([disabled]),
+.app.operations-disabled .settings-actions .btn-primary:not([disabled]),
+.app.operations-disabled .settings-actions .btn-secondary:not([disabled]),
+.app.operations-disabled .license-activation-form button:not([disabled]),
+.app.operations-disabled .license-activation-form input:not([disabled]):not([readonly]),
+.app.operations-disabled .license-activation-form textarea:not([disabled]):not([readonly]),
+.app.operations-disabled .license-activation-form select:not([disabled]) {
+  opacity: 1 !important;
+  cursor: auto !important;
+  pointer-events: auto !important;
+  user-select: auto !important;
+  background-color: inherit !important;
+  color: inherit !important;
+  position: relative !important;
+}
+
+.app.operations-disabled .settings-form button::before,
+.app.operations-disabled .settings-form .btn::before,
+.app.operations-disabled .settings-form .btn-primary::before,
+.app.operations-disabled .settings-form .btn-secondary::before,
+.app.operations-disabled .settings-actions button::before,
+.app.operations-disabled .settings-actions .btn::before,
+.app.operations-disabled .settings-actions .btn-primary::before,
+.app.operations-disabled .license-activation-form button::before {
+  display: none !important;
+}
+
+/* Visual indicator overlay for disabled buttons */
+.app.operations-disabled button:not(.menu-item):not(.license-banner-link):not(.tab):not([data-allow-disabled]):not([data-navigation])::before,
+.app.operations-disabled .btn:not(.menu-item):not(.license-banner-link):not(.tab):not([data-allow-disabled]):not([data-navigation])::before,
+.app.operations-disabled .btn-primary:not(.menu-item):not(.license-banner-link):not(.tab):not([data-allow-disabled]):not([data-navigation])::before,
+.app.operations-disabled .btn-edit:not(.menu-item):not(.license-banner-link):not(.tab):not([data-allow-disabled]):not([data-navigation])::before,
+.app.operations-disabled .btn-delete:not(.menu-item):not(.license-banner-link):not(.tab):not([data-allow-disabled]):not([data-navigation])::before,
+.app.operations-disabled .btn-view:not(.menu-item):not(.license-banner-link):not(.tab):not([data-allow-disabled]):not([data-navigation])::before,
+.app.operations-disabled .btn-danger:not(.menu-item):not(.license-banner-link):not(.tab):not([data-allow-disabled]):not([data-navigation])::before,
+.app.operations-disabled input[type="button"]:not(.menu-item):not(.license-banner-link):not(.tab):not([data-allow-disabled]):not([data-navigation])::before,
+.app.operations-disabled input[type="submit"]:not(.menu-item):not(.license-banner-link):not(.tab):not([data-allow-disabled]):not([data-navigation])::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.6);
+  border-radius: inherit;
+  z-index: 9999;
+  pointer-events: none;
+}
+
+/* Allow specific buttons to work (navigation, Settings, License banner, tabs) */
+.app.operations-disabled .menu-item,
+.app.operations-disabled .license-banner-link,
+.app.operations-disabled .tab,
+.app.operations-disabled button[data-allow-disabled],
+.app.operations-disabled button[data-navigation] {
+  opacity: 1 !important;
+  cursor: pointer !important;
+  pointer-events: auto !important;
+}
+
+.app.operations-disabled .menu-item::before,
+.app.operations-disabled .license-banner-link::before,
+.app.operations-disabled .tab::before,
+.app.operations-disabled button[data-allow-disabled]::before,
+.app.operations-disabled button[data-navigation]::before {
+  display: none !important;
+}
+
+/* Disable form inputs when operations disabled (except search, navigation, and Settings page) */
+.app.operations-disabled input:not([readonly]):not([data-allow-disabled]):not([type="search"]):not([placeholder*="Search"]):not([data-navigation]),
+.app.operations-disabled textarea:not([readonly]):not([data-allow-disabled]):not([data-navigation]),
+.app.operations-disabled select:not([data-allow-disabled]):not([data-navigation]) {
+  opacity: 0.6;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* CRITICAL: Allow all inputs in Settings page ONLY */
+.app.operations-disabled .settings-form input,
+.app.operations-disabled .settings-form textarea,
+.app.operations-disabled .settings-form select,
+.app.operations-disabled .license-activation-form input,
+.app.operations-disabled .license-activation-form textarea,
+.app.operations-disabled .license-activation-form select {
+  opacity: 1 !important;
+  cursor: text !important;
+  pointer-events: auto !important;
+}
+
+/* Allow search inputs and navigation inputs */
+.app.operations-disabled input[type="search"],
+.app.operations-disabled input[placeholder*="Search"],
+.app.operations-disabled input[data-allow-disabled],
+.app.operations-disabled .menu-item input,
+.app.operations-disabled input[data-navigation] {
+  opacity: 1 !important;
+  cursor: text !important;
+  pointer-events: auto !important;
+}
+
+.app-loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100vw;
+  height: 100vh;
+  background-color: #f8fafc;
+}
+
+.loading-spinner {
+  text-align: center;
+}
+
+.loading-spinner .spinner {
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #667eea;
+  border-radius: 50%;
+  width: 50px;
+  height: 50px;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 20px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.loading-spinner p {
+  color: #666;
+  font-size: 16px;
+  margin: 0;
+}
+
 .main-content {
   flex: 1;
   overflow-y: auto;
@@ -30,14 +201,16 @@
 
 /* Content area styling */
 .content-container {
-  padding: 20px;
+  padding: 8px 20px 100px 20px; /* Further reduced top padding from 12px to 8px */
   max-width: 1400px;
   margin: 0 auto;
+  min-height: calc(100vh - 40px); /* Ensure minimum height */
 }
 
 .page-header {
-  margin-bottom: 28px;
-  padding-bottom: 20px;
+  margin-bottom: 20px;
+  margin-top: 4px; /* Reduced top margin from 8px to 4px */
+  padding-bottom: 16px;
   border-bottom: 2px solid #e2e8f0;
 }
 

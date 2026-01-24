@@ -69,12 +69,16 @@
 
 .settings-actions {
   margin-top: 24px;
+  margin-bottom: 40px; /* Add bottom margin to ensure visibility */
   padding: 20px;
   background: white;
   border-radius: 8px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   display: flex;
   justify-content: flex-end;
+  position: sticky;
+  bottom: 20px; /* Stick to bottom with some spacing */
+  z-index: 10;
 }
 
 .read-only-notice {
@@ -99,5 +103,77 @@
   .settings-form {
     padding: 16px;
   }
+}
+
+/* License Status Styles */
+.license-status-activated,
+.license-status-unactivated {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 20px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+
+.license-status-activated {
+  background-color: #e8f5e9;
+  border: 1px solid #81c784;
+}
+
+.license-status-unactivated {
+  background-color: #fff3cd;
+  border: 1px solid #ffc107;
+}
+
+.license-status-icon {
+  font-size: 32px;
+  flex-shrink: 0;
+}
+
+.license-status-content {
+  flex: 1;
+}
+
+.license-status-content h3 {
+  margin: 0 0 8px 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #333;
+}
+
+.license-status-content p {
+  margin: 0 0 12px 0;
+  color: #666;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.license-info {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.license-info p {
+  margin: 4px 0;
+  font-size: 13px;
+  color: #555;
+}
+
+.license-info strong {
+  color: #333;
+}
+
+.license-activation-section {
+  margin-top: 20px;
+}
+
+.license-activation-form-wrapper {
+  margin-top: 20px;
+  padding: 20px;
+  background-color: #f9fafb;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
 }
 

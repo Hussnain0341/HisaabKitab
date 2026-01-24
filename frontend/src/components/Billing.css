@@ -1,12 +1,14 @@
 /* Billing Screen - Fast & Simple POS Design */
 
 .billing-container {
-  padding: 16px;
+  padding: 8px 16px 16px 16px; /* Reduced top padding to 8px */
   max-width: 100%;
   min-height: calc(100vh - 70px);
   display: flex;
   flex-direction: column;
   background: #f1f5f9;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 /* Header Bar with Time */
@@ -17,8 +19,9 @@
   background: white;
   padding: 12px 16px;
   border-radius: 8px;
-  margin-bottom: 12px;
+  margin: 8px 0 12px 0; /* Reduced top margin from 16px to 8px */
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  flex-shrink: 0;
 }
 
 .billing-time-display {
@@ -92,6 +95,7 @@
 .billing-search-section {
   margin-bottom: 16px;
   position: relative;
+  flex-shrink: 0;
 }
 
 .billing-search-box {
@@ -191,6 +195,7 @@
   gap: 16px;
   flex: 1;
   min-height: 500px;
+  align-items: start;
 }
 
 /* LEFT SIDE - Bill Items */
@@ -482,6 +487,9 @@
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   min-width: 380px;
   min-height: 500px;
+  max-height: calc(100vh - 120px);
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .billing-summary-header {
@@ -502,6 +510,8 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
+  overflow-y: auto;
+  min-height: 0;
 }
 
 .billing-summary-row {
@@ -646,7 +656,13 @@
   gap: 8px;
   margin-top: 16px;
   padding-top: 16px;
+  padding-bottom: 8px;
   border-top: 2px solid #e2e8f0;
+  flex-shrink: 0;
+  position: sticky;
+  bottom: 0;
+  background: white;
+  z-index: 10;
 }
 
 .billing-btn {

@@ -1,0 +1,35 @@
+# ============================================
+# RESTART INSTRUCTIONS
+# ============================================
+# 
+# IMPORTANT: You MUST fully restart the app for changes to take effect!
+#
+# Step 1: Stop the current app
+#   - Press Ctrl+C in the terminal where npm start is running
+#   - OR close the Electron window
+#
+# Step 2: Kill any remaining processes (run in PowerShell):
+#   Get-Process | Where-Object {$_.ProcessName -like "*electron*"} | Stop-Process -Force
+#   Get-Process | Where-Object {$_.ProcessName -eq "node"} | Where-Object {$_.CommandLine -like "*server.js*"} | Stop-Process -Force
+#
+# Step 3: Restart the app:
+#   npm start
+#
+# Step 4: Look for this message in the console:
+#   [Server] ========================================
+#   [Server] Registering License Routes...
+#   [Server] Route: POST /api/license/validate
+#   [Server] ========================================
+#
+# If you see this message, the new code is loaded!
+#
+# Step 5: Try activating license and check for:
+#   [License] ===== VALIDATION REQUEST RECEIVED =====
+#
+# ============================================
+
+
+
+
+
+

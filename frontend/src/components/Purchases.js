@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { purchasesAPI, suppliersAPI, productsAPI } from '../services/api';
 import Pagination from './Pagination';
 import './Purchases.css';
 
 const Purchases = ({ readOnly = false }) => {
+  const { t } = useTranslation();
   const [purchases, setPurchases] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
   const [products, setProducts] = useState([]);
@@ -32,7 +34,7 @@ const Purchases = ({ readOnly = false }) => {
       setError(null);
     } catch (err) {
       console.error('Error fetching purchases:', err);
-      setError(err.response?.data?.error || 'Failed to load purchases');
+      setError(err.response?.data?.error || t('purchases.failedToLoad'));
     } finally {
       setLoading(false);
     }
@@ -61,18 +63,18 @@ const Purchases = ({ readOnly = false }) => {
       const response = await purchasesAPI.getById(purchaseId);
       setViewingPurchase(response.data);
     } catch (err) {
-      alert('Failed to load purchase details');
+      alert(t('purchases.failedToLoadDetails'));
     }
   };
 
   const handleDelete = async (purchaseId) => {
-    if (!window.confirm('Are you sure? This will reverse stock updates.')) return;
+    if (!window.confirm(t('purchases.deleteConfirm'))) return;
     try {
       await purchasesAPI.delete(purchaseId);
       await fetchPurchases();
       await fetchProducts();
     } catch (err) {
-      alert(err.response?.data?.error || 'Failed to delete purchase');
+      alert(err.response?.data?.error || t('purchases.purchaseFailed'));
     }
   };
 
@@ -134,8 +136,8 @@ const Purchases = ({ readOnly = false }) => {
   return (
     <div className="content-container">
       <div className="page-header">
-        <h1 className="page-title">Purchases</h1>
-        <p className="page-subtitle">Manage stock purchases from suppliers</p>
+        <h1 className="page-title">{t('purchases.title')}</h1>
+        <p className="page-subtitle">{t('purchases.subtitle')}</p>
       </div>
 
       {error && <div className="error-message">{error}</div>}
@@ -143,9 +145,9 @@ const Purchases = ({ readOnly = false }) => {
       {!readOnly && (
         <div className="card" style={{ marginBottom: '20px' }}>
           <div className="card-header">
-            <h2>Purchases</h2>
+            <h2>{t('purchases.title')}</h2>
             <button className="btn btn-primary" onClick={() => setModalOpen(true)}>
-              + New Purchase
+              + {t('purchases.newPurchase')}
             </button>
           </div>
         </div>
@@ -156,11 +158,11 @@ const Purchases = ({ readOnly = false }) => {
         <div style={{ padding: '16px', borderBottom: '1px solid #e2e8f0' }}>
           <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
             <div style={{ flex: 1, maxWidth: '400px', position: 'relative' }}>
-              <label className="form-label" style={{ marginBottom: '8px', display: 'block', fontSize: '13px' }}>Filter by Supplier</label>
+              <label className="form-label" style={{ marginBottom: '8px', display: 'block', fontSize: '13px' }}>{t('purchases.filterBySupplier')}</label>
               <input
                 type="text"
                 className="form-input"
-                placeholder="Search and select supplier..."
+                placeholder={t('purchases.searchSupplier')}
                 value={supplierSearch || (selectedSupplier ? (suppliers.find(s => s.supplier_id === selectedSupplier)?.name || '') : '')}
                 onChange={(e) => {
                   setSupplierSearch(e.target.value);
@@ -206,7 +208,7 @@ const Purchases = ({ readOnly = false }) => {
                       onMouseEnter={(e) => e.target.style.backgroundColor = '#f8fafc'}
                       onMouseLeave={(e) => e.target.style.backgroundColor = '#ffffff'}
                     >
-                      <div>All Suppliers</div>
+                      <div>{t('purchases.allSuppliers')}</div>
                     </div>
                     {suppliers
                       .filter(s => !supplierSearch || s.name.toLowerCase().includes(supplierSearch.toLowerCase()))
@@ -246,7 +248,7 @@ const Purchases = ({ readOnly = false }) => {
                         </div>
                       ))}
                     {suppliers.filter(s => !supplierSearch || s.name.toLowerCase().includes(supplierSearch.toLowerCase())).length === 0 && (
-                      <div style={{ padding: '12px', color: '#94a3b8', textAlign: 'center' }}>No suppliers found</div>
+                      <div style={{ padding: '12px', color: '#94a3b8', textAlign: 'center' }}>{t('suppliers.noSuppliers')}</div>
                     )}
                   </div>
                   <div 
@@ -264,7 +266,7 @@ const Purchases = ({ readOnly = false }) => {
                   setSupplierSearch('');
                 }}
               >
-                Clear Filter
+                {t('common.clearFilters')}
               </button>
             )}
           </div>
@@ -275,13 +277,13 @@ const Purchases = ({ readOnly = false }) => {
         <table className="purchases-table">
           <thead>
             <tr>
-              <th>Purchase ID</th>
-              <th>Supplier</th>
-              <th>Date</th>
-              <th>Items</th>
-              <th>Total Amount</th>
-              <th>Payment Type</th>
-              <th>Actions</th>
+              <th>{t('purchases.purchaseId')}</th>
+              <th>{t('purchases.supplier')}</th>
+              <th>{t('purchases.purchaseDate')}</th>
+              <th>{t('purchases.items')}</th>
+              <th>{t('purchases.totalAmount')}</th>
+              <th>{t('purchases.paymentType')}</th>
+              <th>{t('common.actions')}</th>
             </tr>
           </thead>
           <tbody>
@@ -289,8 +291,8 @@ const Purchases = ({ readOnly = false }) => {
               <tr>
                 <td colSpan="7" className="empty-state">
                   {selectedSupplier 
-                    ? `No purchases found for ${suppliers.find(s => s.supplier_id === selectedSupplier)?.name || 'selected supplier'}.` 
-                    : 'No purchases found'}
+                    ? t('purchases.noPurchasesForSupplier', { supplier: suppliers.find(s => s.supplier_id === selectedSupplier)?.name || t('purchases.selectedSupplier') }) 
+                    : t('purchases.noPurchases')}
                 </td>
               </tr>
             ) : (
@@ -303,7 +305,7 @@ const Purchases = ({ readOnly = false }) => {
                   <td>{formatCurrency(purchase.total_amount)}</td>
                   <td><span className={`payment-badge ${purchase.payment_type}`}>{purchase.payment_type}</span></td>
                   <td>
-                    <button className="btn-view" onClick={() => handleView(purchase.purchase_id)}>View</button>
+                    <button className="btn-view" onClick={() => handleView(purchase.purchase_id)}>{t('common.view')}</button>
                     {!readOnly && (
                       <>
                         <button className="btn-edit" onClick={async () => {
@@ -311,10 +313,10 @@ const Purchases = ({ readOnly = false }) => {
                             const response = await purchasesAPI.getById(purchase.purchase_id);
                             setEditingPurchase(response.data);
                           } catch (err) {
-                            alert('Failed to load purchase for editing');
+                            alert(t('purchases.failedToLoadForEdit'));
                           }
-                        }}>Edit</button>
-                        <button className="btn-delete" onClick={() => handleDelete(purchase.purchase_id)}>Delete</button>
+                        }}>{t('common.edit')}</button>
+                        <button className="btn-delete" onClick={() => handleDelete(purchase.purchase_id)}>{t('common.delete')}</button>
                       </>
                     )}
                   </td>

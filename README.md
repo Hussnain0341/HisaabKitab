@@ -11,6 +11,7 @@ HisaabKitab helps shop owners manage inventory, billing, suppliers, price change
 - 👥 **Supplier Management** - Manage suppliers and purchase orders
 - 📈 **Reports & Analytics** - Sales reports, profit/loss statements
 - ⚙️ **Settings & Backup** - Configure shop details and backup data
+- 💾 **Automatic Backup System** - Scheduled backups, retention policy, one-click restore
 - 🌐 **Multi-language Support** - English (default) and Urdu
 - 💾 **Offline First** - Works completely offline, no internet required
 - 🖥️ **Desktop Optimized** - Designed for 1366x768 resolution
@@ -162,7 +163,27 @@ npm start
    - **Billing** - Create bills and process sales
    - **Suppliers** - Manage suppliers
    - **Reports** - View sales and analytics
-   - **Settings** - Configure shop settings
+   - **Settings** - Configure shop settings and backup
+
+## Backup System
+
+HisaabKitab includes a comprehensive automatic backup system:
+
+- **Automatic Backups** - Configure backups to run on app start or at scheduled times
+- **Manual Backups** - Create backups on-demand with one click
+- **Retention Policy** - Automatically delete old backups (keep last 3/5/7/10)
+- **One-Click Restore** - Restore your database from the last backup
+- **Transaction Safety** - All critical operations use database transactions to prevent data loss
+
+### Testing Backup Functionality
+
+See **[BACKUP_TESTING_GUIDE.md](./BACKUP_TESTING_GUIDE.md)** for detailed testing instructions.
+
+**Quick Test:**
+1. Go to Settings → Data Safety & Backup
+2. Click "💾 Create Manual Backup"
+3. Verify backup file is created in `/backup` directory
+4. Test restore functionality (⚠️ will replace current database)
 
 ## Development
 

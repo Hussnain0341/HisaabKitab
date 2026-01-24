@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { customersAPI } from '../services/api';
 import CustomerModal from './CustomerModal';
 import CustomerDetailView from './CustomerDetailView';
@@ -6,6 +7,7 @@ import Pagination from './Pagination';
 import './Customers.css';
 
 const Customers = ({ readOnly = false }) => {
+  const { t } = useTranslation();
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -29,7 +31,7 @@ const Customers = ({ readOnly = false }) => {
       setError(null);
     } catch (err) {
       console.error('Error fetching customers:', err);
-      setError(err.response?.data?.error || 'Failed to load customers');
+      setError(err.response?.data?.error || t('customers.failedToLoad'));
     } finally {
       setLoading(false);
     }
@@ -56,7 +58,7 @@ const Customers = ({ readOnly = false }) => {
       setDeleteConfirm(null);
     } catch (err) {
       console.error('Error deleting customer:', err);
-      alert(err.response?.data?.error || 'Failed to delete customer');
+      alert(err.response?.data?.error || t('customers.failedToDelete'));
     }
   };
 
@@ -125,7 +127,7 @@ const Customers = ({ readOnly = false }) => {
   if (loading) {
     return (
       <div className="content-container">
-        <div className="loading">Loading customers...</div>
+        <div className="loading">{t('common.loading')} {t('customers.title').toLowerCase()}...</div>
       </div>
     );
   }
@@ -147,8 +149,8 @@ const Customers = ({ readOnly = false }) => {
   return (
     <div className="content-container">
       <div className="page-header">
-        <h1 className="page-title">Customers</h1>
-        <p className="page-subtitle">Manage customers and track outstanding balances</p>
+        <h1 className="page-title">{t('customers.title')}</h1>
+        <p className="page-subtitle">{t('customers.subtitle')}</p>
       </div>
 
       {error && (
@@ -161,9 +163,9 @@ const Customers = ({ readOnly = false }) => {
         <div className="card" style={{ marginBottom: '20px' }}>
           <div className="card-header">
             <div className="card-header-content">
-              <h2>Customers</h2>
+              <h2>{t('customers.title')}</h2>
               <button className="btn btn-primary" onClick={handleAdd}>
-                + Add Customer
+                + {t('customers.addCustomer')}
               </button>
             </div>
           </div>
@@ -184,11 +186,11 @@ const Customers = ({ readOnly = false }) => {
             <div style={{ padding: '16px', borderBottom: '1px solid #e2e8f0' }}>
               <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
                 <div style={{ flex: 1, maxWidth: '400px' }}>
-                  <label className="form-label" style={{ marginBottom: '8px', display: 'block', fontSize: '13px' }}>Search Customer</label>
+                  <label className="form-label" style={{ marginBottom: '8px', display: 'block', fontSize: '13px' }}>{t('customers.searchCustomer')}</label>
                   <input
                     type="text"
                     className="form-input"
-                    placeholder="Search by customer name or mobile number..."
+                    placeholder={t('customers.searchPlaceholder')}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     style={{ fontSize: '14px', width: '100%' }}
@@ -196,7 +198,7 @@ const Customers = ({ readOnly = false }) => {
                 </div>
                 {searchQuery && (
                   <button className="btn btn-secondary" onClick={() => setSearchQuery('')}>
-                    Clear
+                    {t('common.clear')}
                   </button>
                 )}
               </div>
@@ -206,9 +208,9 @@ const Customers = ({ readOnly = false }) => {
           <div className="card">
             <div className="card-header">
               <div className="card-header-content">
-                <h2>Customers List</h2>
+                <h2>{t('customers.customersList')}</h2>
                 {readOnly && (
-                  <span className="read-only-notice">Read-only mode: Editing disabled</span>
+                  <span className="read-only-notice">{t('common.readOnlyMode')}</span>
                 )}
               </div>
             </div>
@@ -217,18 +219,18 @@ const Customers = ({ readOnly = false }) => {
               <table className="customers-table">
                 <thead>
                   <tr>
-                    <th>Customer Name</th>
-                    <th>Mobile Number</th>
-                    <th>Total Due</th>
-                    <th>Last Activity</th>
-                    <th>Actions</th>
+                    <th>{t('customers.customerName')}</th>
+                    <th>{t('customers.mobileNumber')}</th>
+                    <th>{t('customers.totalDue')}</th>
+                    <th>{t('customers.lastActivity')}</th>
+                    <th>{t('common.actions')}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {paginatedCustomers.length === 0 ? (
                     <tr>
                       <td colSpan="5" className="empty-state">
-                        {searchQuery ? `No customers found matching "${searchQuery}".` : 'No customers found. Click "Add Customer" to get started.'}
+                        {searchQuery ? t('customers.noCustomersMatching', { query: searchQuery }) : t('customers.noCustomers')}
                       </td>
                     </tr>
                   ) : (
@@ -258,23 +260,23 @@ const Customers = ({ readOnly = false }) => {
                                   className="btn-view"
                                   onClick={() => handleView(customer)}
                                 >
-                                  View
+                                  {t('common.view')}
                                 </button>
                                 <button
                                   className="btn-edit"
                                   onClick={() => handleEdit(customer)}
                                 >
-                                  Edit
+                                  {t('common.edit')}
                                 </button>
                                 <button
                                   className="btn-delete"
                                   onClick={() => setDeleteConfirm(customer.customer_id)}
                                 >
-                                  Delete
+                                  {t('common.delete')}
                                 </button>
                               </>
                             ) : (
-                              <span className="read-only-label">View Only</span>
+                              <span className="read-only-label">{t('common.viewOnly')}</span>
                             )}
                           </td>
                         </tr>
@@ -303,17 +305,17 @@ const Customers = ({ readOnly = false }) => {
           {deleteConfirm && (
             <div className="modal-overlay" onClick={() => setDeleteConfirm(null)}>
               <div className="modal delete-modal" onClick={(e) => e.stopPropagation()}>
-                <h3>Confirm Delete</h3>
-                <p>Are you sure you want to delete this customer? This action cannot be undone.</p>
+                <h3>{t('common.confirmDelete')}</h3>
+                <p>{t('customers.deleteConfirm')} {t('common.cannotBeUndone')}</p>
                 <div className="modal-actions">
                   <button className="btn btn-secondary" onClick={() => setDeleteConfirm(null)}>
-                    Cancel
+                    {t('common.cancel')}
                   </button>
                   <button
                     className="btn btn-danger"
                     onClick={() => handleDelete(deleteConfirm)}
                   >
-                    Delete
+                    {t('common.delete')}
                   </button>
                 </div>
               </div>

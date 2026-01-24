@@ -1,9 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { reportsAPI, customersAPI } from '../services/api';
+import { useLicense } from '../contexts/LicenseContext';
 import './Reports.css';
 
 const Reports = () => {
+  const { t } = useTranslation();
+  const { isFeatureEnabled } = useLicense();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -39,6 +43,21 @@ const Reports = () => {
   const customerHistoryDropdownRef = useRef(null);
   const supplierHistoryDropdownRef = useRef(null);
   
+  // Dashboard data
+  const [dashboardData, setDashboardData] = useState(null);
+  
+  // Report data
+  const [salesSummary, setSalesSummary] = useState(null);
+  const [salesByProduct, setSalesByProduct] = useState(null);
+  const [profitData, setProfitData] = useState(null);
+  const [customerDueList, setCustomerDueList] = useState(null);
+  const [customerStatement, setCustomerStatement] = useState(null);
+  const [supplierPayables, setSupplierPayables] = useState(null);
+  const [supplierHistory, setSupplierHistory] = useState(null);
+  const [expensesSummary, setExpensesSummary] = useState(null);
+  const [expensesList, setExpensesList] = useState(null);
+  const [lowStock, setLowStock] = useState(null);
+  
   // Close dropdowns when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -55,21 +74,6 @@ const Reports = () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, []);
-  
-  // Dashboard data
-  const [dashboardData, setDashboardData] = useState(null);
-  
-  // Report data
-  const [salesSummary, setSalesSummary] = useState(null);
-  const [salesByProduct, setSalesByProduct] = useState(null);
-  const [profitData, setProfitData] = useState(null);
-  const [customerDueList, setCustomerDueList] = useState(null);
-  const [customerStatement, setCustomerStatement] = useState(null);
-  const [supplierPayables, setSupplierPayables] = useState(null);
-  const [supplierHistory, setSupplierHistory] = useState(null);
-  const [expensesSummary, setExpensesSummary] = useState(null);
-  const [expensesList, setExpensesList] = useState(null);
-  const [lowStock, setLowStock] = useState(null);
 
   // Handle tab from URL query parameter
   useEffect(() => {
@@ -90,16 +94,19 @@ const Reports = () => {
   }, [searchParams]);
 
   useEffect(() => {
+    if (!isFeatureEnabled('reports')) return;
     updateDateRange();
-  }, [filterType]);
+  }, [filterType, isFeatureEnabled]);
 
   useEffect(() => {
+    if (!isFeatureEnabled('reports')) return;
     fetchProducts();
     fetchSuppliers();
     fetchCustomers();
-  }, []);
+  }, [isFeatureEnabled]);
 
   useEffect(() => {
+    if (!isFeatureEnabled('reports')) return;
     if (activeTab === 'dashboard') {
       fetchDashboardSummary();
     } else if (activeTab === 'sales') {
@@ -139,7 +146,33 @@ const Reports = () => {
     } else if (activeTab === 'stock-low') {
       fetchLowStock();
     }
-  }, [activeTab, salesSubTab, customerSubTab, supplierSubTab, expenseSubTab, filterType, startDate, endDate, selectedProduct, selectedCustomer, selectedSupplierForHistory]);
+  }, [activeTab, salesSubTab, customerSubTab, supplierSubTab, expenseSubTab, filterType, startDate, endDate, selectedProduct, selectedCustomer, selectedSupplierForHistory, isFeatureEnabled]);
+
+  // Check if reports feature is enabled - AFTER all hooks are called
+  if (!isFeatureEnabled('reports')) {
+    return (
+      <div className="content-container">
+        <div className="page-header">
+          <h1 className="page-title">Reports</h1>
+        </div>
+        <div style={{ 
+          padding: '40px', 
+          textAlign: 'center', 
+          background: 'white', 
+          borderRadius: '8px',
+          boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+        }}>
+          <h2 style={{ color: '#e74c3c', marginBottom: '20px' }}>⚠️ Reports Feature Not Available</h2>
+          <p style={{ color: '#666', fontSize: '16px', marginBottom: '10px' }}>
+            The Reports feature is not enabled in your license.
+          </p>
+          <p style={{ color: '#999', fontSize: '14px' }}>
+            Please contact HisaabKitab support to upgrade your license and enable this feature.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   const updateDateRange = () => {
     const today = new Date();
@@ -242,7 +275,7 @@ const Reports = () => {
       setDashboardData(response.data);
     } catch (err) {
       console.error('Error fetching dashboard summary:', err);
-      setError(err.response?.data?.error || 'Failed to load dashboard');
+      setError(err.response?.data?.error || t('reports.failedToLoad', { report: 'dashboard' }));
     } finally {
       setLoading(false);
     }
@@ -258,7 +291,7 @@ const Reports = () => {
       setSalesSummary(response.data);
     } catch (err) {
       console.error('Error fetching sales summary:', err);
-      setError(err.response?.data?.error || 'Failed to load sales summary');
+      setError(err.response?.data?.error || t('reports.failedToLoad', { report: t('reports.sales') }));
     } finally {
       setLoading(false);
     }
@@ -274,7 +307,7 @@ const Reports = () => {
       setSalesByProduct(response.data);
     } catch (err) {
       console.error('Error fetching sales by product:', err);
-      setError(err.response?.data?.error || 'Failed to load sales by product');
+      setError(err.response?.data?.error || t('reports.failedToLoad', { report: t('reports.byProduct') }));
     } finally {
       setLoading(false);
     }
@@ -288,7 +321,7 @@ const Reports = () => {
       setProfitData(response.data);
     } catch (err) {
       console.error('Error fetching profit report:', err);
-      setError(err.response?.data?.error || 'Failed to load profit report');
+      setError(err.response?.data?.error || t('reports.failedToLoad', { report: t('reports.profit') }));
     } finally {
       setLoading(false);
     }
@@ -304,7 +337,7 @@ const Reports = () => {
       setCustomerDueList(response.data);
     } catch (err) {
       console.error('Error fetching customer due list:', err);
-      setError(err.response?.data?.error || 'Failed to load customer due list');
+      setError(err.response?.data?.error || t('reports.failedToLoad', { report: t('reports.dueList') }));
     } finally {
       setLoading(false);
     }
@@ -319,7 +352,7 @@ const Reports = () => {
       setCustomerStatement(response.data);
     } catch (err) {
       console.error('Error fetching customer statement:', err);
-      setError(err.response?.data?.error || 'Failed to load customer statement');
+      setError(err.response?.data?.error || t('reports.failedToLoad', { report: t('reports.history') }));
     } finally {
       setLoading(false);
     }
@@ -335,7 +368,7 @@ const Reports = () => {
       setSupplierPayables(response.data);
     } catch (err) {
       console.error('Error fetching supplier payables:', err);
-      setError(err.response?.data?.error || 'Failed to load supplier payables');
+      setError(err.response?.data?.error || t('reports.failedToLoad', { report: t('reports.payables') }));
     } finally {
       setLoading(false);
     }
@@ -350,7 +383,7 @@ const Reports = () => {
       setSupplierHistory(response.data);
     } catch (err) {
       console.error('Error fetching supplier history:', err);
-      setError(err.response?.data?.error || 'Failed to load supplier history');
+      setError(err.response?.data?.error || t('reports.failedToLoad', { report: t('reports.history') }));
     } finally {
       setLoading(false);
     }
@@ -364,7 +397,7 @@ const Reports = () => {
       setExpensesSummary(response.data);
     } catch (err) {
       console.error('Error fetching expenses summary:', err);
-      setError(err.response?.data?.error || 'Failed to load expenses summary');
+      setError(err.response?.data?.error || t('reports.failedToLoad', { report: t('reports.expenses') }));
     } finally {
       setLoading(false);
     }
@@ -378,7 +411,7 @@ const Reports = () => {
       setExpensesList(response.data);
     } catch (err) {
       console.error('Error fetching expenses list:', err);
-      setError(err.response?.data?.error || 'Failed to load expenses list');
+      setError(err.response?.data?.error || t('reports.failedToLoad', { report: t('reports.list') }));
     } finally {
       setLoading(false);
     }
@@ -392,7 +425,7 @@ const Reports = () => {
       setLowStock(response.data);
     } catch (err) {
       console.error('Error fetching low stock:', err);
-      setError(err.response?.data?.error || 'Failed to load low stock');
+      setError(err.response?.data?.error || t('reports.failedToLoad', { report: t('reports.lowStock') }));
     } finally {
       setLoading(false);
     }
@@ -449,7 +482,7 @@ const Reports = () => {
   // Render Dashboard
   const renderDashboard = () => {
     if (loading && !dashboardData) {
-      return <div className="loading">Loading dashboard...</div>;
+      return <div className="loading">{t('common.loading')} {t('reports.dashboard').toLowerCase()}...</div>;
     }
 
     if (!dashboardData) return null;
@@ -459,25 +492,25 @@ const Reports = () => {
         <div className="dashboard-cards">
           <div className="dashboard-card" onClick={() => { setActiveTab('sales'); setSalesSubTab('summary'); }}>
             <div className="card-icon">💰</div>
-            <div className="card-label">Total Sales</div>
+            <div className="card-label">{t('reports.totalSales')}</div>
             <div className="card-value">{formatCurrency(dashboardData.totalSales)}</div>
           </div>
           
           <div className="dashboard-card" onClick={() => handleCardClick('profit')}>
             <div className="card-icon">📊</div>
-            <div className="card-label">Total Purchases</div>
+            <div className="card-label">{t('reports.totalPurchases')}</div>
             <div className="card-value">{formatCurrency(dashboardData.totalPurchases)}</div>
           </div>
           
           <div className="dashboard-card" onClick={() => { setActiveTab('expenses'); setExpenseSubTab('summary'); }}>
             <div className="card-icon">💸</div>
-            <div className="card-label">Total Expenses</div>
+            <div className="card-label">{t('reports.totalExpenses')}</div>
             <div className="card-value">{formatCurrency(dashboardData.totalExpenses)}</div>
           </div>
           
           <div className="dashboard-card highlight" onClick={() => handleCardClick('profit')}>
             <div className="card-icon">✅</div>
-            <div className="card-label">Net Profit</div>
+            <div className="card-label">{t('reports.netProfit')}</div>
             <div className={`card-value ${dashboardData.netProfit >= 0 ? 'profit-positive' : 'profit-negative'}`}>
               {formatCurrency(dashboardData.netProfit)}
             </div>
@@ -485,13 +518,13 @@ const Reports = () => {
           
           <div className="dashboard-card" onClick={() => { setActiveTab('sales'); setSalesSubTab('summary'); }}>
             <div className="card-icon">💵</div>
-            <div className="card-label">Cash Received</div>
+            <div className="card-label">{t('reports.cashReceived')}</div>
             <div className="card-value">{formatCurrency(dashboardData.cashReceived)}</div>
           </div>
           
           <div className="dashboard-card" onClick={() => { setActiveTab('customers'); setCustomerSubTab('due-list'); }}>
             <div className="card-icon">📝</div>
-            <div className="card-label">Credit Given (Udhaar)</div>
+            <div className="card-label">{t('reports.creditGiven')}</div>
             <div className="card-value">{formatCurrency(dashboardData.creditGiven)}</div>
           </div>
         </div>
@@ -510,27 +543,27 @@ const Reports = () => {
             onClick={() => setSalesSubTab('summary')}
             style={{ borderBottom: 'none', borderRadius: '6px 6px 0 0' }}
           >
-            Sales Summary
+            {t('reports.salesSummary')}
           </button>
           <button
             className={`tab ${salesSubTab === 'by-product' ? 'active' : ''}`}
             onClick={() => setSalesSubTab('by-product')}
             style={{ borderBottom: 'none', borderRadius: '6px 6px 0 0' }}
           >
-            Sales by Product
+            {t('reports.salesByProduct')}
           </button>
         </div>
 
         {/* Product Filter - Only show in Sales tab */}
         <div style={{ marginBottom: '20px' }}>
           <div className="form-group">
-            <label className="form-label">Filter by Product</label>
+            <label className="form-label">{t('reports.filterByProduct')}</label>
             <select
               className="form-input"
               value={selectedProduct}
               onChange={(e) => setSelectedProduct(e.target.value)}
             >
-              <option value="">All Products</option>
+              <option value="">{t('reports.allProducts')}</option>
               {products.map(product => (
                 <option key={product.product_id} value={product.product_id}>
                   {product.name || product.item_name_english}
@@ -550,7 +583,7 @@ const Reports = () => {
   // Render Sales Summary
   const renderSalesSummary = () => {
     if (loading && !salesSummary) {
-      return <div className="loading">Loading sales summary...</div>;
+      return <div className="loading">{t('reports.loading')}</div>;
     }
 
     if (!salesSummary) return null;
@@ -559,19 +592,19 @@ const Reports = () => {
       <div>
         <div className="report-totals">
           <div className="total-card">
-            <div className="total-label">Total Sales Amount</div>
+            <div className="total-label">{t('reports.totalSalesAmount')}</div>
             <div className="total-value">{formatCurrency(salesSummary.totalSales)}</div>
           </div>
           <div className="total-card">
-            <div className="total-label">Number of Invoices</div>
+            <div className="total-label">{t('reports.numberOfInvoices')}</div>
             <div className="total-value">{salesSummary.invoiceCount}</div>
           </div>
           <div className="total-card">
-            <div className="total-label">Cash Sales</div>
+            <div className="total-label">{t('reports.cashSales')}</div>
             <div className="total-value profit-positive">{formatCurrency(salesSummary.cashSales)}</div>
           </div>
           <div className="total-card">
-            <div className="total-label">Credit Sales</div>
+            <div className="total-label">{t('reports.creditSales')}</div>
             <div className="total-value">{formatCurrency(salesSummary.creditSales)}</div>
           </div>
         </div>
@@ -582,7 +615,7 @@ const Reports = () => {
   // Render Sales by Product
   const renderSalesByProduct = () => {
     if (loading && !salesByProduct) {
-      return <div className="loading">Loading sales by product...</div>;
+      return <div className="loading">{t('reports.loading')}</div>;
     }
 
     if (!salesByProduct || !salesByProduct.products) return null;
@@ -593,15 +626,15 @@ const Reports = () => {
           <table className="reports-table">
             <thead>
               <tr>
-                <th>Product Name</th>
-                <th>Quantity Sold</th>
-                <th>Total Sale Amount</th>
+                <th>{t('reports.productName')}</th>
+                <th>{t('reports.quantitySold')}</th>
+                <th>{t('reports.totalSaleAmount')}</th>
               </tr>
             </thead>
             <tbody>
               {salesByProduct.products.length === 0 ? (
                 <tr>
-                  <td colSpan="3" className="empty-state">No sales found for this period.</td>
+                  <td colSpan="3" className="empty-state">{t('reports.noSalesFound')}</td>
                 </tr>
               ) : (
                 salesByProduct.products.map((product) => (
@@ -622,7 +655,7 @@ const Reports = () => {
   // Render Profit Report
   const renderProfit = () => {
     if (loading && !profitData) {
-      return <div className="loading">Loading profit report...</div>;
+      return <div className="loading">{t('reports.loading')}</div>;
     }
 
     if (!profitData) return null;
@@ -631,19 +664,19 @@ const Reports = () => {
       <div className="report-content">
         <div className="report-totals">
           <div className="total-card">
-            <div className="total-label">Total Sales</div>
+            <div className="total-label">{t('reports.totalSales')}</div>
             <div className="total-value">{formatCurrency(profitData.totalSales)}</div>
           </div>
           <div className="total-card">
-            <div className="total-label">Total Purchases</div>
+            <div className="total-label">{t('reports.totalPurchases')}</div>
             <div className="total-value profit-negative">{formatCurrency(profitData.totalPurchases)}</div>
           </div>
           <div className="total-card">
-            <div className="total-label">Total Expenses</div>
+            <div className="total-label">{t('reports.totalExpenses')}</div>
             <div className="total-value profit-negative">{formatCurrency(profitData.totalExpenses)}</div>
           </div>
           <div className="total-card highlight">
-            <div className="total-label">Net Profit</div>
+            <div className="total-label">{t('reports.netProfit')}</div>
             <div className={`total-value ${profitData.netProfit >= 0 ? 'profit-positive' : 'profit-negative'}`}>
               {formatCurrency(profitData.netProfit)}
             </div>
@@ -664,14 +697,14 @@ const Reports = () => {
             onClick={() => { setCustomerSubTab('due-list'); setSelectedCustomer(''); setCustomerStatement(null); }}
             style={{ borderBottom: 'none', borderRadius: '6px 6px 0 0' }}
           >
-            Due List
+            {t('reports.dueList')}
           </button>
           <button
             className={`tab ${customerSubTab === 'history' ? 'active' : ''}`}
             onClick={() => { setCustomerSubTab('history'); }}
             style={{ borderBottom: 'none', borderRadius: '6px 6px 0 0' }}
           >
-            History
+            {t('reports.history')}
           </button>
         </div>
 
@@ -685,7 +718,7 @@ const Reports = () => {
   // Render Customer Due List
   const renderCustomerDueList = () => {
     if (loading && !customerDueList) {
-      return <div className="loading">Loading customer due list...</div>;
+      return <div className="loading">{t('reports.loading')}</div>;
     }
 
     if (!customerDueList || !customerDueList.customers) return null;
@@ -703,21 +736,21 @@ const Reports = () => {
       <div className="report-content">
         <div className="report-totals">
           <div className="total-card highlight">
-            <div className="total-label">Total Customers with Due</div>
+            <div className="total-label">{t('reports.totalCustomersWithDue')}</div>
             <div className="total-value">{filteredCustomers.length}</div>
           </div>
           <div className="total-card highlight">
-            <div className="total-label">Total Remaining Due</div>
+            <div className="total-label">{t('reports.totalRemainingDue')}</div>
             <div className="total-value profit-negative">{formatCurrency(customerDueList.total_due)}</div>
           </div>
         </div>
         <div style={{ marginBottom: '16px' }}>
           <div className="form-group">
-            <label className="form-label">Search Customer (Name or Mobile)</label>
+            <label className="form-label">{t('reports.searchCustomer')}</label>
             <input
               type="text"
               className="form-input"
-              placeholder="Type to search customers..."
+              placeholder={t('reports.typeToSearch')}
               value={customerDueSearch}
               onChange={(e) => setCustomerDueSearch(e.target.value)}
             />
@@ -727,17 +760,17 @@ const Reports = () => {
           <table className="reports-table">
             <thead>
               <tr>
-                <th>Customer Name</th>
-                <th>Mobile Number</th>
-                <th>Remaining Due</th>
-                <th>Action</th>
+                <th>{t('reports.customerName')}</th>
+                <th>{t('reports.mobileNumber')}</th>
+                <th>{t('reports.remainingDue')}</th>
+                <th>{t('reports.action')}</th>
               </tr>
             </thead>
             <tbody>
               {filteredCustomers.length === 0 ? (
                 <tr>
                   <td colSpan="4" className="empty-state">
-                    {customerDueSearch ? 'No customers found matching your search.' : 'No customers with due amounts.'}
+                    {customerDueSearch ? t('reports.noCustomersFound') : t('reports.noCustomersDue')}
                   </td>
                 </tr>
               ) : (
@@ -770,7 +803,7 @@ const Reports = () => {
   // Render Customer Statement
   const renderCustomerStatement = () => {
     if (loading && !customerStatement) {
-      return <div className="loading">Loading customer statement...</div>;
+      return <div className="loading">{t('reports.loading')}</div>;
     }
 
     if (!customerStatement) {
@@ -792,11 +825,11 @@ const Reports = () => {
       return (
         <div className="report-content">
           <div className="form-group" style={{ position: 'relative' }} ref={customerHistoryDropdownRef}>
-            <label className="form-label">Select Customer</label>
+            <label className="form-label">{t('reports.selectCustomer')}</label>
             <input
               type="text"
               className="form-input"
-              placeholder="Type to search customers..."
+              placeholder={t('reports.typeToSearch')}
               value={selectedCustomer ? displayValue : customerHistorySearch}
               onChange={(e) => {
                 setCustomerHistorySearch(e.target.value);
@@ -845,7 +878,7 @@ const Reports = () => {
                     )}
                     {customer.current_due > 0 && (
                       <div style={{ fontSize: '12px', color: '#dc2626', fontWeight: 600 }}>
-                        Due: {formatCurrency(customer.current_due)}
+                    {t('reports.due')} {formatCurrency(customer.current_due)}
                       </div>
                     )}
                   </div>
@@ -891,7 +924,7 @@ const Reports = () => {
                   setShowCustomerHistoryDropdown(false);
                 }}
               >
-                Change Customer
+                {t('reports.changeCustomer')}
               </button>
               <button 
                 className="btn btn-secondary"
@@ -901,21 +934,21 @@ const Reports = () => {
                   setCustomerStatement(null);
                 }}
               >
-                Back to List
+                {t('reports.backToList')}
               </button>
             </div>
           </div>
           <div className="report-totals">
             <div className="total-card">
-              <div className="total-label">Total Sales</div>
+              <div className="total-label">{t('reports.totalSales')}</div>
               <div className="total-value">{formatCurrency(customerStatement.total_sales)}</div>
             </div>
             <div className="total-card">
-              <div className="total-label">Total Payments</div>
+              <div className="total-label">{t('reports.totalPayments')}</div>
               <div className="total-value profit-positive">{formatCurrency(customerStatement.total_payments)}</div>
             </div>
             <div className="total-card highlight">
-              <div className="total-label">Remaining Balance</div>
+              <div className="total-label">{t('reports.remainingBalance')}</div>
               <div className="total-value profit-negative">{formatCurrency(customerStatement.remaining_balance)}</div>
             </div>
           </div>
@@ -965,14 +998,14 @@ const Reports = () => {
             onClick={() => { setSupplierSubTab('payables'); setSelectedSupplierForHistory(''); setSupplierHistory(null); }}
             style={{ borderBottom: 'none', borderRadius: '6px 6px 0 0' }}
           >
-            Payables
+            {t('reports.payables')}
           </button>
           <button
             className={`tab ${supplierSubTab === 'history' ? 'active' : ''}`}
             onClick={() => { setSupplierSubTab('history'); }}
             style={{ borderBottom: 'none', borderRadius: '6px 6px 0 0' }}
           >
-            History
+            {t('reports.history')}
           </button>
         </div>
 
@@ -986,7 +1019,7 @@ const Reports = () => {
   // Render Supplier Payables
   const renderSupplierPayables = () => {
     if (loading && !supplierPayables) {
-      return <div className="loading">Loading supplier payables...</div>;
+      return <div className="loading">{t('reports.loading')}</div>;
     }
 
     if (!supplierPayables || !Array.isArray(supplierPayables)) return null;
@@ -1010,17 +1043,17 @@ const Reports = () => {
       <div className="report-content">
         <div className="report-totals">
           <div className="total-card highlight">
-            <div className="total-label">Total Amount to Pay</div>
+            <div className="total-label">{t('reports.totalAmountToPay')}</div>
             <div className="total-value profit-negative">{formatCurrency(totalPayable)}</div>
           </div>
         </div>
         <div style={{ marginBottom: '16px' }}>
           <div className="form-group">
-            <label className="form-label">Search Supplier (Name or Contact)</label>
+            <label className="form-label">{t('reports.searchSupplier')}</label>
             <input
               type="text"
               className="form-input"
-              placeholder="Type to search suppliers..."
+              placeholder={t('reports.typeToSearch')}
               value={supplierPayablesSearch}
               onChange={(e) => setSupplierPayablesSearch(e.target.value)}
             />
@@ -1030,16 +1063,16 @@ const Reports = () => {
           <table className="reports-table">
             <thead>
               <tr>
-                <th>Supplier Name</th>
-                <th>Amount to Pay</th>
-                <th>Action</th>
+                <th>{t('reports.supplierName')}</th>
+                <th>{t('reports.amountToPay')}</th>
+                <th>{t('reports.action')}</th>
               </tr>
             </thead>
             <tbody>
               {filteredSuppliers.length === 0 ? (
                 <tr>
                   <td colSpan="3" className="empty-state">
-                    {supplierPayablesSearch ? 'No suppliers found matching your search.' : 'No suppliers with payable amounts.'}
+                    {supplierPayablesSearch ? t('reports.noSuppliersFound') : t('reports.noSuppliersPayable')}
                   </td>
                 </tr>
               ) : (
@@ -1055,7 +1088,7 @@ const Reports = () => {
                           setSupplierSubTab('history');
                         }}
                       >
-                        View History
+                        {t('reports.viewHistory')}
                       </button>
                     </td>
                   </tr>
@@ -1071,7 +1104,7 @@ const Reports = () => {
   // Render Supplier History
   const renderSupplierHistory = () => {
     if (loading && !supplierHistory) {
-      return <div className="loading">Loading supplier history...</div>;
+      return <div className="loading">{t('reports.loading')}</div>;
     }
 
     if (!supplierHistory) {
@@ -1200,21 +1233,21 @@ const Reports = () => {
                   setSupplierHistory(null);
                 }}
               >
-                Back to List
+                {t('reports.backToList')}
               </button>
             </div>
           </div>
           <div className="report-totals">
             <div className="total-card">
-              <div className="total-label">Total Purchases</div>
+              <div className="total-label">{t('reports.totalPurchases')}</div>
               <div className="total-value">{formatCurrency(supplierHistory.total_purchases)}</div>
             </div>
             <div className="total-card">
-              <div className="total-label">Total Paid</div>
+              <div className="total-label">{t('reports.totalPaid')}</div>
               <div className="total-value profit-positive">{formatCurrency(supplierHistory.total_paid)}</div>
             </div>
             <div className="total-card highlight">
-              <div className="total-label">Remaining Balance</div>
+              <div className="total-label">{t('reports.remainingBalance')}</div>
               <div className="total-value profit-negative">{formatCurrency(Math.abs(parseFloat(supplierHistory.remaining_balance || 0)))}</div>
             </div>
           </div>
@@ -1264,14 +1297,14 @@ const Reports = () => {
             onClick={() => setExpenseSubTab('summary')}
             style={{ borderBottom: 'none', borderRadius: '6px 6px 0 0' }}
           >
-            Summary
+            {t('reports.summary')}
           </button>
           <button
             className={`tab ${expenseSubTab === 'list' ? 'active' : ''}`}
             onClick={() => setExpenseSubTab('list')}
             style={{ borderBottom: 'none', borderRadius: '6px 6px 0 0' }}
           >
-            List
+            {t('reports.list')}
           </button>
         </div>
 
@@ -1285,7 +1318,7 @@ const Reports = () => {
   // Render Expenses Summary
   const renderExpensesSummary = () => {
     if (loading && !expensesSummary) {
-      return <div className="loading">Loading expenses summary...</div>;
+      return <div className="loading">{t('reports.loading')}</div>;
     }
 
     if (!expensesSummary) return null;
@@ -1298,19 +1331,19 @@ const Reports = () => {
             <div className="total-value profit-negative">{formatCurrency(expensesSummary.totalExpenses)}</div>
           </div>
           <div className="total-card">
-            <div className="total-label">Number of Expenses</div>
+            <div className="total-label">{t('reports.numberOfExpenses')}</div>
             <div className="total-value">{expensesSummary.expenseCount}</div>
           </div>
         </div>
         {expensesSummary.categoryBreakdown && expensesSummary.categoryBreakdown.length > 0 && (
           <div className="table-container">
-            <h3>Category Breakdown</h3>
+            <h3>{t('reports.categoryBreakdown')}</h3>
             <table className="reports-table">
               <thead>
                 <tr>
-                  <th>Category</th>
-                  <th>Total Amount</th>
-                  <th>Count</th>
+                  <th>{t('reports.category')}</th>
+                  <th>{t('reports.totalAmount')}</th>
+                  <th>{t('reports.count')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -1332,7 +1365,7 @@ const Reports = () => {
   // Render Expenses List
   const renderExpensesList = () => {
     if (loading && !expensesList) {
-      return <div className="loading">Loading expenses list...</div>;
+      return <div className="loading">{t('reports.loading')}</div>;
     }
 
     if (!expensesList || !expensesList.expenses) return null;
@@ -1374,7 +1407,7 @@ const Reports = () => {
   // Render Low Stock
   const renderLowStock = () => {
     if (loading && !lowStock) {
-      return <div className="loading">Loading low stock...</div>;
+      return <div className="loading">{t('reports.loading')}</div>;
     }
 
     if (!lowStock || !lowStock.products) return null;
@@ -1385,15 +1418,15 @@ const Reports = () => {
           <table className="reports-table">
             <thead>
               <tr>
-                <th>Product Name</th>
-                <th>Current Qty</th>
-                <th>Minimum Qty</th>
+                <th>{t('reports.productName')}</th>
+                <th>{t('reports.currentQty')}</th>
+                <th>{t('reports.minimumQty')}</th>
               </tr>
             </thead>
             <tbody>
               {lowStock.products.length === 0 ? (
                 <tr>
-                  <td colSpan="3" className="empty-state">No low stock items found.</td>
+                  <td colSpan="3" className="empty-state">{t('reports.noLowStockItems')}</td>
                 </tr>
               ) : (
                 lowStock.products.map((product) => (
@@ -1414,8 +1447,8 @@ const Reports = () => {
   return (
     <div className="content-container">
       <div className="page-header">
-        <h1 className="page-title">Reports</h1>
-        <p className="page-subtitle">View your business reports and summaries</p>
+        <h1 className="page-title">{t('reports.title')}</h1>
+        <p className="page-subtitle">{t('reports.subtitle')}</p>
       </div>
 
       {error && (
@@ -1427,7 +1460,7 @@ const Reports = () => {
       {/* Date Filter Section - KEEP EXACTLY AS IS */}
       <div className="card" style={{ marginBottom: '20px' }}>
         <div className="card-header">
-          <h2>Filter Reports</h2>
+          <h2>{t('reports.filterReports')}</h2>
         </div>
         <div className="card-content">
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px', marginBottom: '16px' }}>
@@ -1435,55 +1468,55 @@ const Reports = () => {
               className={`btn ${filterType === 'daily' ? 'btn-primary' : 'btn-secondary'}`}
               onClick={() => setFilterType('daily')}
             >
-              Daily
+              {t('reports.daily')}
             </button>
             <button 
               className={`btn ${filterType === 'weekly' ? 'btn-primary' : 'btn-secondary'}`}
               onClick={() => setFilterType('weekly')}
             >
-              Weekly
+              {t('reports.weekly')}
             </button>
             <button 
               className={`btn ${filterType === 'monthly' ? 'btn-primary' : 'btn-secondary'}`}
               onClick={() => setFilterType('monthly')}
             >
-              Monthly
+              {t('reports.monthly')}
             </button>
             <button 
               className={`btn ${filterType === 'last3months' ? 'btn-primary' : 'btn-secondary'}`}
               onClick={() => setFilterType('last3months')}
             >
-              Last 3 Months
+              {t('reports.last3Months')}
             </button>
             <button 
               className={`btn ${filterType === 'last6months' ? 'btn-primary' : 'btn-secondary'}`}
               onClick={() => setFilterType('last6months')}
             >
-              Last 6 Months
+              {t('reports.last6Months')}
             </button>
             <button 
               className={`btn ${filterType === 'thisyear' ? 'btn-primary' : 'btn-secondary'}`}
               onClick={() => setFilterType('thisyear')}
             >
-              This Year
+              {t('reports.thisYear')}
             </button>
             <button 
               className={`btn ${filterType === 'lastyear' ? 'btn-primary' : 'btn-secondary'}`}
               onClick={() => setFilterType('lastyear')}
             >
-              Last Year
+              {t('reports.lastYear')}
             </button>
             <button 
               className={`btn ${filterType === 'custom' ? 'btn-primary' : 'btn-secondary'}`}
               onClick={() => setFilterType('custom')}
             >
-              Custom Range
+              {t('reports.customRange')}
             </button>
           </div>
           {filterType === 'custom' && (
             <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-end', marginBottom: '16px' }}>
               <div className="form-group">
-                <label className="form-label">Start Date</label>
+                <label className="form-label">{t('reports.startDate')}</label>
                 <input 
                   type="date" 
                   className="form-input" 
@@ -1498,7 +1531,7 @@ const Reports = () => {
                 />
               </div>
               <div className="form-group">
-                <label className="form-label">End Date</label>
+                <label className="form-label">{t('reports.endDate')}</label>
                 <input 
                   type="date" 
                   className="form-input" 
@@ -1517,29 +1550,29 @@ const Reports = () => {
                 onClick={() => {
                   if (customStartDate && customEndDate) {
                     if (new Date(customStartDate) > new Date(customEndDate)) {
-                      alert('Start date cannot be after end date');
+                      alert(t('reports.startDateCannotBeAfter'));
                       return;
                     }
                     setStartDate(customStartDate);
                     setEndDate(customEndDate);
                   } else {
-                    alert('Please select both start and end dates');
+                    alert(t('reports.selectBothDates'));
                   }
                 }}
               >
-                Apply
+                {t('reports.apply')}
               </button>
             </div>
           )}
           {filterType !== 'custom' && (
             <div style={{ padding: '12px', backgroundColor: '#f8fafc', borderRadius: '6px', fontSize: '14px', marginBottom: '16px' }}>
-              <strong>Date Range:</strong> {new Date(startDate).toLocaleDateString()} to {new Date(endDate).toLocaleDateString()}
+              <strong>{t('reports.dateRange')}</strong> {new Date(startDate).toLocaleDateString()} {t('common.to')} {new Date(endDate).toLocaleDateString()}
             </div>
           )}
           
           <div style={{ display: 'flex', gap: '12px' }}>
             <button className="btn btn-secondary" onClick={handleClearFilters}>
-              Clear Filters
+              {t('reports.clearFilters')}
             </button>
           </div>
         </div>
@@ -1550,44 +1583,51 @@ const Reports = () => {
         <button 
           className={`tab ${activeTab === 'dashboard' ? 'active' : ''}`}
           onClick={() => setActiveTab('dashboard')}
+          data-navigation="true"
         >
-          Dashboard
+          {t('reports.dashboard')}
         </button>
         <button 
           className={`tab ${activeTab === 'sales' ? 'active' : ''}`}
           onClick={() => { setActiveTab('sales'); setSalesSubTab('summary'); }}
+          data-navigation="true"
         >
-          Sales
+          {t('reports.sales')}
         </button>
         <button 
           className={`tab ${activeTab === 'profit' ? 'active' : ''}`}
           onClick={() => setActiveTab('profit')}
+          data-navigation="true"
         >
-          Profit Report
+          {t('reports.profit')}
         </button>
         <button 
           className={`tab ${activeTab === 'customers' ? 'active' : ''}`}
           onClick={() => { setActiveTab('customers'); setCustomerSubTab('due-list'); }}
+          data-navigation="true"
         >
-          Customers
+          {t('reports.customers')}
         </button>
         <button 
           className={`tab ${activeTab === 'suppliers' ? 'active' : ''}`}
           onClick={() => { setActiveTab('suppliers'); setSupplierSubTab('payables'); }}
+          data-navigation="true"
         >
-          Suppliers
+          {t('reports.suppliers')}
         </button>
         <button 
           className={`tab ${activeTab === 'expenses' ? 'active' : ''}`}
           onClick={() => { setActiveTab('expenses'); setExpenseSubTab('summary'); }}
+          data-navigation="true"
         >
-          Expenses
+          {t('reports.expenses')}
         </button>
         <button 
           className={`tab ${activeTab === 'stock-low' ? 'active' : ''}`}
           onClick={() => setActiveTab('stock-low')}
+          data-navigation="true"
         >
-          Low Stock
+          {t('reports.lowStock')}
         </button>
       </div>
 

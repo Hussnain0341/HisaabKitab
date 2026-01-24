@@ -119,54 +119,70 @@ router.get('/:id', async (req, res) => {
 
 // Create new expense
 router.post('/', async (req, res) => {
+  const client = await db.getClient();
+  
   try {
+    await client.query('BEGIN');
+
     const { expense_category, amount, expense_date, payment_method, notes } = req.body;
 
     // Validation
     if (!expense_category || !expense_category.trim()) {
-      return res.status(400).json({ error: 'Expense name is required' });
+      throw new Error('Expense name is required');
     }
 
     const expenseAmount = parseFloat(amount);
     if (!expenseAmount || expenseAmount <= 0) {
-      return res.status(400).json({ error: 'Amount must be greater than 0' });
+      throw new Error('Amount must be greater than 0');
     }
 
     const expenseDate = expense_date ? new Date(expense_date) : new Date();
     const paymentMethod = payment_method || 'cash';
 
-    const result = await db.query(
+    const result = await client.query(
       `INSERT INTO daily_expenses (expense_category, amount, expense_date, payment_method, notes)
        VALUES ($1, $2, $3, $4, $5)
        RETURNING *`,
       [expense_category.trim(), expenseAmount, expenseDate, paymentMethod, notes || null]
     );
 
+    await client.query('COMMIT');
+
     res.status(201).json(result.rows[0]);
   } catch (error) {
+    await client.query('ROLLBACK');
     console.error('Error creating expense:', error);
-    res.status(500).json({ error: 'Failed to create expense', message: error.message });
+    res.status(400).json({ 
+      error: error.message || 'Failed to create expense',
+      details: error.message 
+    });
+  } finally {
+    client.release();
   }
 });
 
 // Update expense
 router.put('/:id', async (req, res) => {
+  const client = await db.getClient();
+  
   try {
+    await client.query('BEGIN');
+
     const { id } = req.params;
     const { expense_category, amount, expense_date, payment_method, notes } = req.body;
 
     if (!expense_category || !expense_category.trim()) {
-      return res.status(400).json({ error: 'Expense category is required' });
+      throw new Error('Expense category is required');
     }
 
     const expenseAmount = parseFloat(amount);
     if (!expenseAmount || expenseAmount <= 0) {
-      return res.status(400).json({ error: 'Amount must be greater than 0' });
+      throw new Error('Amount must be greater than 0');
     }
 
     const expenseDate = expense_date ? new Date(expense_date) : null;
 
-    const result = await db.query(
+    const result = await client.query(
       `UPDATE daily_expenses 
        SET expense_category = $1, amount = $2, expense_date = COALESCE($3, expense_date), 
            payment_method = $4, notes = $5
@@ -176,34 +192,54 @@ router.put('/:id', async (req, res) => {
     );
 
     if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Expense not found' });
+      throw new Error('Expense not found');
     }
+
+    await client.query('COMMIT');
 
     res.json(result.rows[0]);
   } catch (error) {
+    await client.query('ROLLBACK');
     console.error('Error updating expense:', error);
-    res.status(500).json({ error: 'Failed to update expense', message: error.message });
+    res.status(400).json({ 
+      error: error.message || 'Failed to update expense',
+      details: error.message 
+    });
+  } finally {
+    client.release();
   }
 });
 
 // Delete expense
 router.delete('/:id', async (req, res) => {
+  const client = await db.getClient();
+  
   try {
+    await client.query('BEGIN');
+
     const { id } = req.params;
     
-    const result = await db.query(
+    const result = await client.query(
       'DELETE FROM daily_expenses WHERE expense_id = $1 RETURNING expense_id',
       [id]
     );
 
     if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Expense not found' });
+      throw new Error('Expense not found');
     }
+
+    await client.query('COMMIT');
 
     res.json({ message: 'Expense deleted successfully', expense_id: id });
   } catch (error) {
+    await client.query('ROLLBACK');
     console.error('Error deleting expense:', error);
-    res.status(500).json({ error: 'Failed to delete expense', message: error.message });
+    res.status(400).json({ 
+      error: error.message || 'Failed to delete expense',
+      details: error.message 
+    });
+  } finally {
+    client.release();
   }
 });
 

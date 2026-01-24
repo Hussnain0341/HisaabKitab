@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { expensesAPI } from '../services/api';
 import Pagination from './Pagination';
 import './Expenses.css';
 
 const Expenses = ({ readOnly = false }) => {
+  const { t } = useTranslation();
   const [expenses, setExpenses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -84,7 +86,7 @@ const Expenses = ({ readOnly = false }) => {
       setError(null);
     } catch (err) {
       console.error('Error fetching expenses:', err);
-      setError(err.response?.data?.error || 'Failed to load expenses');
+      setError(err.response?.data?.error || t('expenses.failedToLoad'));
     } finally {
       setLoading(false);
     }
@@ -107,12 +109,12 @@ const Expenses = ({ readOnly = false }) => {
   };
 
   const handleDelete = async (expenseId) => {
-    if (!window.confirm('Are you sure?')) return;
+    if (!window.confirm(t('common.confirmDelete'))) return;
     try {
       await expensesAPI.delete(expenseId);
       await fetchExpenses();
     } catch (err) {
-      alert(err.response?.data?.error || 'Failed to delete expense');
+      alert(err.response?.data?.error || t('expenses.failedToDelete'));
     }
   };
 
@@ -139,14 +141,14 @@ const Expenses = ({ readOnly = false }) => {
   }, [startDate, endDate]);
 
   if (loading) {
-    return <div className="content-container"><div className="loading">Loading expenses...</div></div>;
+    return <div className="content-container"><div className="loading">{t('common.loading')} {t('expenses.title').toLowerCase()}...</div></div>;
   }
 
   return (
     <div className="content-container">
       <div className="page-header">
-        <h1 className="page-title">Daily Expenses</h1>
-        <p className="page-subtitle">Track and manage daily business expenses</p>
+        <h1 className="page-title">{t('expenses.title')}</h1>
+        <p className="page-subtitle">{t('expenses.subtitle')}</p>
       </div>
 
       {error && <div className="error-message">{error}</div>}
@@ -154,7 +156,7 @@ const Expenses = ({ readOnly = false }) => {
       {/* Date Filter Section */}
       <div className="card" style={{ marginBottom: '20px' }}>
         <div className="card-header">
-          <h2>Filter Expenses</h2>
+          <h2>{t('expenses.filter')}</h2>
         </div>
         <div className="card-content">
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px', marginBottom: '16px' }}>
@@ -162,55 +164,55 @@ const Expenses = ({ readOnly = false }) => {
               className={`btn ${filterType === 'daily' ? 'btn-primary' : 'btn-secondary'}`}
               onClick={() => setFilterType('daily')}
             >
-              Daily
+              {t('expenses.daily')}
             </button>
             <button 
               className={`btn ${filterType === 'weekly' ? 'btn-primary' : 'btn-secondary'}`}
               onClick={() => setFilterType('weekly')}
             >
-              Weekly
+              {t('expenses.weekly')}
             </button>
             <button 
               className={`btn ${filterType === 'monthly' ? 'btn-primary' : 'btn-secondary'}`}
               onClick={() => setFilterType('monthly')}
             >
-              Monthly
+              {t('expenses.monthly')}
             </button>
             <button 
               className={`btn ${filterType === 'last3months' ? 'btn-primary' : 'btn-secondary'}`}
               onClick={() => setFilterType('last3months')}
             >
-              Last 3 Months
+              {t('expenses.last3Months')}
             </button>
             <button 
               className={`btn ${filterType === 'last6months' ? 'btn-primary' : 'btn-secondary'}`}
               onClick={() => setFilterType('last6months')}
             >
-              Last 6 Months
+              {t('expenses.last6Months')}
             </button>
             <button 
               className={`btn ${filterType === 'thisyear' ? 'btn-primary' : 'btn-secondary'}`}
               onClick={() => setFilterType('thisyear')}
             >
-              This Year
+              {t('expenses.thisYear')}
             </button>
             <button 
               className={`btn ${filterType === 'lastyear' ? 'btn-primary' : 'btn-secondary'}`}
               onClick={() => setFilterType('lastyear')}
             >
-              Last Year
+              {t('expenses.lastYear')}
             </button>
             <button 
               className={`btn ${filterType === 'custom' ? 'btn-primary' : 'btn-secondary'}`}
               onClick={() => setFilterType('custom')}
             >
-              Custom Range
+              {t('expenses.custom')}
             </button>
           </div>
           {filterType === 'custom' && (
             <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-end' }}>
               <div className="form-group">
-                <label className="form-label">Start Date</label>
+                <label className="form-label">{t('expenses.startDate')}</label>
                 <input 
                   type="date" 
                   className="form-input" 
@@ -225,7 +227,7 @@ const Expenses = ({ readOnly = false }) => {
                 />
               </div>
               <div className="form-group">
-                <label className="form-label">End Date</label>
+                <label className="form-label">{t('expenses.endDate')}</label>
                 <input 
                   type="date" 
                   className="form-input" 
@@ -244,23 +246,23 @@ const Expenses = ({ readOnly = false }) => {
                 onClick={() => {
                   if (customStartDate && customEndDate) {
                     if (new Date(customStartDate) > new Date(customEndDate)) {
-                      alert('Start date cannot be after end date');
+                      alert(t('expenses.startDateAfterEndDate'));
                       return;
                     }
                     setStartDate(customStartDate);
                     setEndDate(customEndDate);
                   } else {
-                    alert('Please select both start and end dates');
+                    alert(t('expenses.selectBothDates'));
                   }
                 }}
               >
-                Apply
+                {t('common.apply')}
               </button>
             </div>
           )}
           {filterType !== 'custom' && (
             <div style={{ padding: '12px', backgroundColor: '#f8fafc', borderRadius: '6px', fontSize: '14px' }}>
-              <strong>Date Range:</strong> {new Date(startDate).toLocaleDateString()} to {new Date(endDate).toLocaleDateString()}
+              <strong>{t('expenses.dateRange')}:</strong> {new Date(startDate).toLocaleDateString()} {t('common.to')} {new Date(endDate).toLocaleDateString()}
             </div>
           )}
         </div>
@@ -269,22 +271,22 @@ const Expenses = ({ readOnly = false }) => {
       {/* Statistics Cards Section - Essential Metrics */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px', marginBottom: '20px' }}>
         <div className="card" style={{ background: '#3b82f6', color: 'white', padding: '16px' }}>
-          <div style={{ fontSize: '13px', opacity: 0.95, marginBottom: '6px' }}>Number of Expenses</div>
+          <div style={{ fontSize: '13px', opacity: 0.95, marginBottom: '6px' }}>{t('expenses.numberOfExpenses')}</div>
           <div style={{ fontSize: '28px', fontWeight: 'bold' }}>{totalExpenses}</div>
         </div>
 
         <div className="card" style={{ background: '#ef4444', color: 'white', padding: '16px' }}>
-          <div style={{ fontSize: '13px', opacity: 0.95, marginBottom: '6px' }}>Total Expense Amount</div>
+          <div style={{ fontSize: '13px', opacity: 0.95, marginBottom: '6px' }}>{t('expenses.totalExpenseAmount')}</div>
           <div style={{ fontSize: '28px', fontWeight: 'bold' }}>{formatCurrency(totalAmount)}</div>
         </div>
 
         <div className="card" style={{ background: '#10b981', color: 'white', padding: '16px' }}>
-          <div style={{ fontSize: '13px', opacity: 0.95, marginBottom: '6px' }}>Average Expense</div>
+          <div style={{ fontSize: '13px', opacity: 0.95, marginBottom: '6px' }}>{t('expenses.averageExpense')}</div>
           <div style={{ fontSize: '28px', fontWeight: 'bold' }}>{formatCurrency(averageAmount)}</div>
         </div>
 
         <div className="card" style={{ background: '#f59e0b', color: 'white', padding: '16px' }}>
-          <div style={{ fontSize: '13px', opacity: 0.95, marginBottom: '6px' }}>Highest Expense</div>
+          <div style={{ fontSize: '13px', opacity: 0.95, marginBottom: '6px' }}>{t('expenses.highestExpense')}</div>
           <div style={{ fontSize: '28px', fontWeight: 'bold' }}>{formatCurrency(highestExpense)}</div>
         </div>
       </div>
@@ -292,10 +294,10 @@ const Expenses = ({ readOnly = false }) => {
       <div className="card" style={{ marginBottom: '20px' }}>
         <div className="card-header">
           <div className="card-header-content">
-            <h2>Expenses</h2>
+            <h2>{t('expenses.title')}</h2>
             {!readOnly && (
               <button className="btn btn-primary" onClick={() => { setEditingExpense(null); setModalOpen(true); }}>
-                + Add Expense
+                + {t('expenses.addExpense')}
               </button>
             )}
           </div>
@@ -304,16 +306,16 @@ const Expenses = ({ readOnly = false }) => {
           <table className="expenses-table">
             <thead>
               <tr>
-                <th>Expense Name</th>
-                <th>Amount</th>
-                <th>Payment Method</th>
-                <th>Notes</th>
-                <th>Actions</th>
+                <th>{t('expenses.expenseCategory')}</th>
+                <th>{t('expenses.amount')}</th>
+                <th>{t('expenses.paymentMethod')}</th>
+                <th>{t('expenses.notes')}</th>
+                <th>{t('common.actions')}</th>
               </tr>
             </thead>
             <tbody>
               {paginatedExpenses.length === 0 ? (
-                <tr><td colSpan="5" className="empty-state">No expenses found for the selected date range</td></tr>
+                <tr><td colSpan="5" className="empty-state">{t('expenses.noExpensesForDateRange')}</td></tr>
               ) : (
                 paginatedExpenses.map(expense => (
                   <tr key={expense.expense_id}>
@@ -324,8 +326,8 @@ const Expenses = ({ readOnly = false }) => {
                     <td>
                       {!readOnly && (
                         <>
-                          <button className="btn-edit" onClick={() => { setEditingExpense(expense); setModalOpen(true); }}>Edit</button>
-                          <button className="btn-delete" onClick={() => handleDelete(expense.expense_id)}>Delete</button>
+                          <button className="btn-edit" onClick={() => { setEditingExpense(expense); setModalOpen(true); }}>{t('common.edit')}</button>
+                          <button className="btn-delete" onClick={() => handleDelete(expense.expense_id)}>{t('common.delete')}</button>
                         </>
                       )}
                     </td>
@@ -335,7 +337,7 @@ const Expenses = ({ readOnly = false }) => {
             </tbody>
             <tfoot>
               <tr>
-                <td><strong>Total:</strong></td>
+                <td><strong>{t('common.total')}:</strong></td>
                 <td><strong>{formatCurrency(totalToday)}</strong></td>
                 <td colSpan="3"></td>
               </tr>
@@ -371,6 +373,7 @@ const Expenses = ({ readOnly = false }) => {
 };
 
 const ExpenseModal = ({ expense, date, onSave, onClose }) => {
+  const { t } = useTranslation();
   const [formData, setFormData] = useState({
     expense_category: expense?.expense_category || '',
     amount: expense?.amount || '',
@@ -383,14 +386,14 @@ const ExpenseModal = ({ expense, date, onSave, onClose }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.expense_category || !formData.amount) {
-      alert('Please fill all required fields');
+      alert(t('expenses.fillAllFields'));
       return;
     }
     setSaving(true);
     try {
       await onSave(formData);
     } catch (err) {
-      alert(err.response?.data?.error || 'Failed to save expense');
+      alert(err.response?.data?.error || t('expenses.failedToSave'));
     } finally {
       setSaving(false);
     }
@@ -400,40 +403,40 @@ const ExpenseModal = ({ expense, date, onSave, onClose }) => {
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <h2>{expense ? 'Edit Expense' : 'Add Expense'}</h2>
+          <h2>{expense ? t('expenses.editExpense') : t('expenses.addExpense')}</h2>
           <button className="modal-close" onClick={onClose}>×</button>
         </div>
         <form onSubmit={handleSubmit} className="modal-content">
           <div className="form-group">
-            <label className="form-label">Expense Name *</label>
-            <input className="form-input" required value={formData.expense_category} onChange={(e) => setFormData({...formData, expense_category: e.target.value})} placeholder="e.g., Rent, Utilities, Supplies" />
+            <label className="form-label">{t('expenses.expenseCategory')} *</label>
+            <input className="form-input" required value={formData.expense_category} onChange={(e) => setFormData({...formData, expense_category: e.target.value})} placeholder={t('expenses.expenseCategoryPlaceholder')} />
           </div>
           <div className="form-row">
             <div className="form-group">
-              <label className="form-label">Amount *</label>
+              <label className="form-label">{t('expenses.amount')} *</label>
               <input type="number" step="0.01" className="form-input" required value={formData.amount} onChange={(e) => setFormData({...formData, amount: e.target.value})} />
             </div>
             <div className="form-group">
-              <label className="form-label">Date</label>
+              <label className="form-label">{t('expenses.expenseDate')}</label>
               <input type="date" className="form-input" value={formData.expense_date} onChange={(e) => setFormData({...formData, expense_date: e.target.value})} />
             </div>
             <div className="form-group">
-              <label className="form-label">Payment Method</label>
+              <label className="form-label">{t('expenses.paymentMethod')}</label>
               <select className="form-input" value={formData.payment_method} onChange={(e) => setFormData({...formData, payment_method: e.target.value})}>
-                <option value="cash">Cash</option>
-                <option value="card">Card</option>
-                <option value="bank_transfer">Bank Transfer</option>
-                <option value="other">Other</option>
+                <option value="cash">{t('billing.cash')}</option>
+                <option value="card">{t('billing.card')}</option>
+                <option value="bank_transfer">{t('billing.bankTransfer')}</option>
+                <option value="other">{t('billing.other')}</option>
               </select>
             </div>
           </div>
           <div className="form-group">
-            <label className="form-label">Notes</label>
+            <label className="form-label">{t('expenses.notes')}</label>
             <textarea className="form-input" rows="3" value={formData.notes} onChange={(e) => setFormData({...formData, notes: e.target.value})} />
           </div>
           <div className="modal-actions">
-            <button type="button" className="btn btn-secondary" onClick={onClose}>Cancel</button>
-            <button type="submit" className="btn btn-primary" disabled={saving}>{saving ? 'Saving...' : 'Save'}</button>
+            <button type="button" className="btn btn-secondary" onClick={onClose}>{t('common.cancel')}</button>
+            <button type="submit" className="btn btn-primary" disabled={saving}>{saving ? t('common.loading') : t('common.save')}</button>
           </div>
         </form>
       </div>

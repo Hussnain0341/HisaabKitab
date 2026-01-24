@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
 const { spawn } = require('child_process');
 
@@ -206,6 +206,25 @@ ipcMain.handle('set-store-value', async (event, key, value) => {
 
 ipcMain.handle('get-store-value', async (event, key) => {
   return store.get(key) || null;
+});
+
+// Directory selection handler for backup location
+ipcMain.handle('select-directory', async () => {
+  try {
+    const result = await dialog.showOpenDialog(mainWindow, {
+      properties: ['openDirectory'],
+      title: 'Select Backup Directory'
+    });
+    
+    if (result.canceled) {
+      return null;
+    }
+    
+    return result.filePaths[0] || null;
+  } catch (error) {
+    console.error('Error selecting directory:', error);
+    return null;
+  }
 });
 
 app.whenReady().then(() => {

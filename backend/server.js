@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const fs = require('fs');
 require('dotenv').config({ path: path.join(__dirname, '.env') });
 
 const app = express();
@@ -43,17 +44,32 @@ app.use((req, res, next) => {
 // Database connection
 const db = require('./db');
 
-// Test database connection on startup
+// License middleware (must be loaded before routes)
+const licenseMiddleware = require('./middleware/licenseMiddleware');
+
+// Test database connection on startup (non-blocking)
 db.query('SELECT NOW() as current_time')
   .then(() => {
     console.log('✅ Database connection verified');
+    
+    // Initialize backup scheduler and perform startup backup
+    const backupScheduler = require('./utils/backupScheduler');
+    backupScheduler.initializeScheduler().then(() => {
+      console.log('[Backup Scheduler] Scheduler initialized');
+    });
+    
+    // Perform startup backup if enabled (non-blocking)
+    backupScheduler.performStartupBackup().catch(err => {
+      console.error('[Backup Scheduler] Startup backup error:', err);
+    });
   })
   .catch((err) => {
     console.error('❌ Database connection failed:', err.message);
     console.error('Please check your .env file and ensure PostgreSQL is running');
+    // CRITICAL: Don't crash - app can still open in read-only mode
   });
 
-// Health check endpoint
+// Health check endpoint (no license check)
 app.get('/api/health', (req, res) => {
   res.json({ 
     status: 'ok', 
@@ -63,7 +79,74 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// API routes
+// License routes (no license check required)
+console.log('\n[Server] ========================================');
+console.log('[Server] Registering License Routes...');
+console.log('[Server] Route: POST /api/license/validate');
+console.log('[Server] Route: GET /api/license/status');
+console.log('[Server] Route: POST /api/license/revalidate');
+console.log('[Server] Route: GET /api/license/test');
+console.log('[Server] ========================================\n');
+app.use('/api/license', require('./routes/license'));
+
+// Setup routes (no license check required)
+app.use('/api/setup', require('./routes/setup'));
+
+// Serve React app static files FIRST (before license check)
+// This ensures the React app can load even without a license
+// Check if build folder exists, serve it if available (for both dev and production)
+const buildPath = path.join(__dirname, '../frontend/build');
+if (fs.existsSync(buildPath)) {
+  app.use(express.static(buildPath));
+}
+
+// Apply license middleware to API routes only (not static files or React app)
+// License check happens after read-only check
+app.use((req, res, next) => {
+  // Skip license check for:
+  // - Health check
+  // - License endpoints
+  // - Setup endpoints
+  // - Static files (React app)
+  if (
+    req.path === '/api/health' || 
+    req.path.startsWith('/api/license') || 
+    req.path.startsWith('/api/setup') ||
+    req.path.startsWith('/static/') ||
+    (!req.path.startsWith('/api/') && req.method === 'GET')
+  ) {
+    return next();
+  }
+  
+  // Apply license check to all other API routes
+  licenseMiddleware.checkLicense(req, res, next);
+});
+
+// CRITICAL: Apply write-guard middleware after license check
+// This ensures backend also enforces read-only mode (frontend can be bypassed)
+app.use((req, res, next) => {
+  // Skip write-guard for:
+  // - Health check
+  // - License endpoints (they handle their own checks)
+  // - Setup endpoints
+  // - Settings endpoints (must always be accessible for license activation and language changes)
+  // - Static files
+  if (
+    req.path === '/api/health' || 
+    req.path.startsWith('/api/license') || 
+    req.path.startsWith('/api/setup') ||
+    req.path.startsWith('/api/settings') ||
+    req.path.startsWith('/static/') ||
+    (!req.path.startsWith('/api/') && req.method === 'GET')
+  ) {
+    return next();
+  }
+  
+  // Apply write-guard to all other API routes
+  licenseMiddleware.checkWriteOperations(req, res, next);
+});
+
+// API routes (protected by license middleware)
 app.use('/api/products', require('./routes/products'));
 app.use('/api/suppliers', require('./routes/suppliers'));
 app.use('/api/sales', require('./routes/sales'));
@@ -77,12 +160,17 @@ app.use('/api/reports', require('./routes/reports'));
 app.use('/api/settings', require('./routes/settings'));
 app.use('/api/backup', require('./routes/backup'));
 
-// Serve React app in production
-if (process.env.NODE_ENV === 'production') {
-  app.use(express.static(path.join(__dirname, '../frontend/build')));
-  
+// Catch-all route for React app (must be last, after all API routes)
+// This serves index.html for any non-API routes (React Router)
+const indexHtmlPath = path.join(__dirname, '../frontend/build', 'index.html');
+if (fs.existsSync(indexHtmlPath)) {
   app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, '../frontend/build', 'index.html'));
+    // Only serve index.html for non-API routes
+    if (!req.path.startsWith('/api/')) {
+      res.sendFile(indexHtmlPath);
+    } else {
+      res.status(404).json({ error: 'API endpoint not found' });
+    }
   });
 }
 

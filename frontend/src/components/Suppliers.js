@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { suppliersAPI } from '../services/api';
 import SupplierModal from './SupplierModal';
 import SupplierDetailView from './SupplierDetailView';
@@ -6,6 +7,7 @@ import Pagination from './Pagination';
 import './Suppliers.css';
 
 const Suppliers = ({ readOnly = false }) => {
+  const { t } = useTranslation();
   const [suppliers, setSuppliers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -30,7 +32,7 @@ const Suppliers = ({ readOnly = false }) => {
       setError(null);
     } catch (err) {
       console.error('Error fetching suppliers:', err);
-      setError(err.response?.data?.error || 'Failed to load suppliers');
+      setError(err.response?.data?.error || t('suppliers.failedToLoad'));
     } finally {
       setLoading(false);
     }
@@ -57,7 +59,7 @@ const Suppliers = ({ readOnly = false }) => {
       setDeleteConfirm(null);
     } catch (err) {
       console.error('Error deleting supplier:', err);
-      alert(err.response?.data?.error || 'Failed to delete supplier');
+      alert(err.response?.data?.error || t('suppliers.supplierFailed'));
     }
   };
 
@@ -128,7 +130,7 @@ const Suppliers = ({ readOnly = false }) => {
   if (loading) {
     return (
       <div className="content-container">
-        <div className="loading">Loading suppliers...</div>
+        <div className="loading">{t('common.loading')} {t('suppliers.title').toLowerCase()}...</div>
       </div>
     );
   }
@@ -150,8 +152,8 @@ const Suppliers = ({ readOnly = false }) => {
   return (
     <div className="content-container">
       <div className="page-header">
-        <h1 className="page-title">Suppliers</h1>
-        <p className="page-subtitle">Manage your suppliers and purchase orders</p>
+        <h1 className="page-title">{t('suppliers.title')}</h1>
+        <p className="page-subtitle">{t('suppliers.subtitle')}</p>
       </div>
 
       {error && (
@@ -164,9 +166,9 @@ const Suppliers = ({ readOnly = false }) => {
         <div className="card" style={{ marginBottom: '20px' }}>
           <div className="card-header">
             <div className="card-header-content">
-              <h2>Suppliers</h2>
+              <h2>{t('suppliers.title')}</h2>
               <button className="btn btn-primary" onClick={handleAdd}>
-                + Add Supplier
+                + {t('suppliers.addSupplier')}
               </button>
             </div>
           </div>
@@ -177,11 +179,11 @@ const Suppliers = ({ readOnly = false }) => {
         <div style={{ padding: '16px', borderBottom: '1px solid #e2e8f0' }}>
           <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-end' }}>
             <div style={{ flex: 1, maxWidth: '400px' }}>
-              <label className="form-label" style={{ marginBottom: '8px', display: 'block', fontSize: '13px' }}>Search Supplier</label>
+              <label className="form-label" style={{ marginBottom: '8px', display: 'block', fontSize: '13px' }}>{t('suppliers.searchSuppliers')}</label>
               <input
                 type="text"
                 className="form-input"
-                placeholder="Search by supplier name or contact number..."
+                placeholder={t('suppliers.searchPlaceholder')}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 style={{ fontSize: '14px', width: '100%' }}
@@ -189,7 +191,7 @@ const Suppliers = ({ readOnly = false }) => {
             </div>
             {searchQuery && (
               <button className="btn btn-secondary" onClick={() => setSearchQuery('')}>
-                Clear
+                {t('common.clear')}
               </button>
             )}
           </div>
@@ -199,9 +201,9 @@ const Suppliers = ({ readOnly = false }) => {
       <div className="card">
         <div className="card-header">
           <div className="card-header-content">
-            <h2>Suppliers List</h2>
+            <h2>{t('suppliers.suppliersList')}</h2>
             {readOnly && (
-              <span className="read-only-notice">Read-only mode: Editing disabled</span>
+              <span className="read-only-notice">{t('common.readOnlyMode')}</span>
             )}
           </div>
         </div>
@@ -210,18 +212,18 @@ const Suppliers = ({ readOnly = false }) => {
           <table className="suppliers-table">
             <thead>
               <tr>
-                <th>Supplier Name</th>
-                <th>Phone</th>
-                <th>Payable Balance</th>
-                <th>Last Activity</th>
-                <th>Actions</th>
+                <th>{t('suppliers.supplierName')}</th>
+                <th>{t('suppliers.contact')}</th>
+                <th>{t('suppliers.balance')}</th>
+                <th>{t('suppliers.lastActivity')}</th>
+                <th>{t('common.actions')}</th>
               </tr>
             </thead>
             <tbody>
               {paginatedSuppliers.length === 0 ? (
                 <tr>
                   <td colSpan="5" className="empty-state">
-                    {searchQuery ? `No suppliers found matching "${searchQuery}".` : 'No suppliers found. Click "Add Supplier" to get started.'}
+                    {searchQuery ? t('suppliers.noSuppliersMatching', { query: searchQuery }) : t('suppliers.noSuppliers')}
                   </td>
                 </tr>
               ) : (
@@ -251,23 +253,23 @@ const Suppliers = ({ readOnly = false }) => {
                               className="btn-view"
                               onClick={() => handleView(supplier)}
                             >
-                              View
+                              {t('common.view')}
                             </button>
                             <button
                               className="btn-edit"
                               onClick={() => handleEdit(supplier)}
                             >
-                              Edit
+                              {t('common.edit')}
                             </button>
                             <button
                               className="btn-delete"
                               onClick={() => setDeleteConfirm(supplier.supplier_id)}
                             >
-                              Delete
+                              {t('common.delete')}
                             </button>
                           </>
                         ) : (
-                          <span className="read-only-label">View Only</span>
+                          <span className="read-only-label">{t('common.viewOnly')}</span>
                         )}
                       </td>
                     </tr>
@@ -296,17 +298,17 @@ const Suppliers = ({ readOnly = false }) => {
       {deleteConfirm && (
         <div className="modal-overlay" onClick={() => setDeleteConfirm(null)}>
           <div className="modal delete-modal" onClick={(e) => e.stopPropagation()}>
-            <h3>Confirm Delete</h3>
-            <p>Are you sure you want to delete this supplier? This action cannot be undone.</p>
+            <h3>{t('common.confirmDelete')}</h3>
+            <p>{t('suppliers.deleteConfirm')} {t('common.cannotBeUndone')}</p>
             <div className="modal-actions">
               <button className="btn btn-secondary" onClick={() => setDeleteConfirm(null)}>
-                Cancel
+                {t('common.cancel')}
               </button>
               <button
                 className="btn btn-danger"
                 onClick={() => handleDelete(deleteConfirm)}
               >
-                Delete
+                {t('common.delete')}
               </button>
             </div>
           </div>

@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { productsAPI, salesAPI, settingsAPI, customersAPI } from '../services/api';
 import './Billing.css';
 
 const Billing = ({ readOnly = false }) => {
+  const { t } = useTranslation();
   // Core state
   const [products, setProducts] = useState([]);
   const [customers, setCustomers] = useState([]);
@@ -267,7 +269,7 @@ const Billing = ({ readOnly = false }) => {
   // Handle save invoice
   const handleSaveInvoice = async (shouldPrint = false) => {
     if (invoiceItems.length === 0) {
-      alert('Please add at least one item to the invoice');
+      alert(t('billing.addAtLeastOneItem'));
       return;
     }
 
@@ -325,7 +327,7 @@ const Billing = ({ readOnly = false }) => {
       // Refresh products to update stock
       await fetchProducts();
 
-      alert(`Invoice ${savedInvoice.invoice_number} saved successfully!`);
+      alert(t('billing.invoiceSaved', { invoiceNumber: savedInvoice.invoice_number }));
     } catch (err) {
       console.error('Error saving invoice:', err);
       const errorMsg = err.response?.data?.error || err.response?.data?.details || 'Failed to save invoice';
@@ -553,7 +555,7 @@ const Billing = ({ readOnly = false }) => {
   if (loading) {
     return (
       <div className="billing-container">
-        <div className="loading">Loading...</div>
+        <div className="loading">{t('common.loading')}</div>
       </div>
     );
   }
@@ -573,10 +575,10 @@ const Billing = ({ readOnly = false }) => {
           <div className="billing-time">{currentTime.toLocaleTimeString('en-PK', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</div>
         </div>
         <div className="billing-invoice-display">
-          <span>Invoice: {invoiceNumber || 'New Bill'}</span>
+          <span>{t('billing.invoiceNumber')}: {invoiceNumber || t('billing.newBill')}</span>
           {selectedCustomer && (
             <span className="billing-customer-balance">
-              {selectedCustomer.name} - Balance: {formatCurrency(selectedCustomer.current_due || selectedCustomer.current_balance || 0)}
+              {selectedCustomer.name} - {t('billing.balance')}: {formatCurrency(selectedCustomer.current_due || selectedCustomer.current_balance || 0)}
             </span>
           )}
         </div>
@@ -591,7 +593,7 @@ const Billing = ({ readOnly = false }) => {
             ref={searchInputRef}
             type="text"
             className="billing-search-input"
-            placeholder="Search product and press Enter to add..."
+            placeholder={t('billing.searchProducts')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             onKeyPress={handleSearchKeyPress}
@@ -615,7 +617,7 @@ const Billing = ({ readOnly = false }) => {
                   <div className="billing-result-info">
                     <div className="billing-result-name">{product.item_name_english || product.name}</div>
                     <div className="billing-result-meta">
-                      <span className="billing-result-stock">Stock: {product.quantity_in_stock || 0} {product.unit_type || 'pcs'}</span>
+                      <span className="billing-result-stock">{t('inventory.stock')}: {product.quantity_in_stock || 0} {product.unit_type || 'pcs'}</span>
                       <span className="billing-result-price">{formatCurrency(displayPrice)}</span>
                     </div>
                   </div>
@@ -631,14 +633,14 @@ const Billing = ({ readOnly = false }) => {
         {/* LEFT SIDE - Bill Items Table */}
         <div className="billing-items-section">
           <div className="billing-section-header">
-            <h3>Bill Items</h3>
+            <h3>{t('billing.invoiceItems')}</h3>
             <div className="billing-customer-selector-wrapper">
               <div className="billing-customer-dropdown-container">
                 <div 
                   className="billing-customer-select-trigger"
                   onClick={() => setShowCustomerDropdown(!showCustomerDropdown)}
                 >
-                  {selectedCustomer ? selectedCustomer.name : 'Cash Customer'}
+                  {selectedCustomer ? selectedCustomer.name : t('billing.cashCustomer')}
                   <span className="billing-dropdown-arrow">▼</span>
                 </div>
                 {showCustomerDropdown && (
@@ -651,7 +653,7 @@ const Billing = ({ readOnly = false }) => {
                       <input
                         type="text"
                         className="billing-customer-search-input"
-                        placeholder="Search customer..."
+                        placeholder={t('billing.searchCustomer')}
                         value={customerSearchQuery}
                         onChange={(e) => setCustomerSearchQuery(e.target.value)}
                         onClick={(e) => e.stopPropagation()}
@@ -667,7 +669,7 @@ const Billing = ({ readOnly = false }) => {
                             setShowCustomerDropdown(false);
                           }}
                         >
-                          Cash Customer
+                          {t('billing.cashCustomer')}
                         </div>
                         {filteredCustomers.map(c => (
                           <div
@@ -706,7 +708,7 @@ const Billing = ({ readOnly = false }) => {
                           >
                             {c.name} {c.customer_type ? `(${c.customer_type})` : ''}
                             {c.current_due > 0 && (
-                              <span className="billing-customer-due">Due: {formatCurrency(c.current_due)}</span>
+                              <span className="billing-customer-due">{t('billing.due')}: {formatCurrency(c.current_due)}</span>
                             )}
                           </div>
                         ))}
@@ -719,7 +721,7 @@ const Billing = ({ readOnly = false }) => {
                 <input
                   type="text"
                   className="billing-customer-name-input"
-                  placeholder="Or enter customer name..."
+                  placeholder={t('billing.enterCustomerName')}
                   value={customerName}
                   onChange={(e) => setCustomerName(e.target.value)}
                 />
@@ -731,10 +733,10 @@ const Billing = ({ readOnly = false }) => {
             <table className="billing-items-table">
               <thead>
                 <tr>
-                  <th>Product Name</th>
-                  <th>Qty</th>
-                  <th>Price</th>
-                  <th>Total</th>
+                  <th>{t('billing.productName')}</th>
+                  <th>{t('billing.qty')}</th>
+                  <th>{t('billing.price')}</th>
+                  <th>{t('common.total')}</th>
                   <th></th>
                 </tr>
               </thead>
@@ -742,7 +744,7 @@ const Billing = ({ readOnly = false }) => {
                 {invoiceItems.length === 0 ? (
                   <tr>
                     <td colSpan="5" className="billing-empty-items">
-                      <div>No items in bill. Search and add products.</div>
+                      <div>{t('billing.noItemsInBill')}</div>
                     </td>
                   </tr>
                 ) : (
@@ -757,7 +759,7 @@ const Billing = ({ readOnly = false }) => {
                           <div className="billing-item-name">{item.product_name}</div>
                           {stockWarning && (
                             <div className="billing-stock-warning">
-                              ⚠️ Low stock: {item.stock_available} available
+                              ⚠️ {t('billing.lowStockWarning', { available: item.stock_available })}
                             </div>
                           )}
                         </td>
@@ -785,9 +787,9 @@ const Billing = ({ readOnly = false }) => {
                               value={priceType}
                               onChange={(e) => handlePriceTypeChange(index, e.target.value)}
                             >
-                              <option value="retail">Retail</option>
-                              <option value="wholesale">Wholesale</option>
-                              {product?.special_price && <option value="special">Special</option>}
+                              <option value="retail">{t('billing.retail')}</option>
+                              <option value="wholesale">{t('billing.wholesale')}</option>
+                              {product?.special_price && <option value="special">{t('billing.special')}</option>}
                             </select>
                             <input
                               type="number"
@@ -807,7 +809,7 @@ const Billing = ({ readOnly = false }) => {
                             className="billing-remove-btn-text"
                             onClick={() => handleRemoveItem(index)}
                           >
-                            Remove
+                            {t('billing.remove')}
                           </button>
                         </td>
                       </tr>
@@ -822,17 +824,17 @@ const Billing = ({ readOnly = false }) => {
         {/* RIGHT SIDE - Bill Summary */}
         <div className="billing-summary-section">
           <div className="billing-summary-header">
-            <h3>Bill Summary</h3>
+            <h3>{t('billing.billSummary')}</h3>
           </div>
 
           <div className="billing-summary-content">
             <div className="billing-summary-row">
-              <span className="billing-summary-label">Subtotal:</span>
+              <span className="billing-summary-label">{t('billing.subtotal')}:</span>
               <span className="billing-summary-value">{formatCurrency(subtotal)}</span>
             </div>
 
             <div className="billing-summary-row">
-              <label className="billing-summary-label">Discount:</label>
+              <label className="billing-summary-label">{t('billing.discount')}:</label>
               <input
                 type="number"
                 step="0.01"
@@ -845,27 +847,27 @@ const Billing = ({ readOnly = false }) => {
             </div>
 
             <div className="billing-summary-row billing-grand-total">
-              <span className="billing-summary-label">Grand Total:</span>
+              <span className="billing-summary-label">{t('billing.grandTotal')}:</span>
               <span className="billing-summary-value">{formatCurrency(grandTotal)}</span>
             </div>
 
             <div className="billing-summary-row">
-              <label className="billing-summary-label">Mode of Payment:</label>
+              <label className="billing-summary-label">{t('billing.paymentMode')}:</label>
               <select
                 className="billing-payment-mode-select"
                 value={paymentMode}
                 onChange={(e) => setPaymentMode(e.target.value)}
               >
-                <option value="cash">Cash</option>
-                <option value="card">Card</option>
-                <option value="bank_transfer">Bank Transfer</option>
-                <option value="cheque">Cheque</option>
-                <option value="other">Other</option>
+                <option value="cash">{t('billing.cash')}</option>
+                <option value="card">{t('billing.card')}</option>
+                <option value="bank_transfer">{t('billing.bankTransfer')}</option>
+                <option value="cheque">{t('billing.cheque')}</option>
+                <option value="other">{t('billing.other')}</option>
               </select>
             </div>
 
             <div className="billing-summary-row">
-              <label className="billing-summary-label">Paid Amount:</label>
+              <label className="billing-summary-label">{t('billing.paidAmount')}:</label>
               <input
                 type="number"
                 step="0.01"
@@ -882,28 +884,28 @@ const Billing = ({ readOnly = false }) => {
 
             {paid > 0 && (
               <div className="billing-summary-row billing-paid-display">
-                <span className="billing-summary-label">Amount Paid:</span>
+                <span className="billing-summary-label">{t('billing.amountPaid')}:</span>
                 <span className="billing-summary-value">{formatCurrency(paid)}</span>
               </div>
             )}
 
             {change > 0 && (
               <div className="billing-summary-row billing-change-display">
-                <span className="billing-summary-label">Change to Return:</span>
+                <span className="billing-summary-label">{t('billing.changeToReturn')}:</span>
                 <span className="billing-summary-value">{formatCurrency(change)}</span>
               </div>
             )}
 
             {remainingDue > 0 && (
               <div className="billing-summary-row billing-remaining-due">
-                <span className="billing-summary-label">Remaining Due:</span>
+                <span className="billing-summary-label">{t('billing.remainingDue')}:</span>
                 <span className="billing-summary-value">{formatCurrency(remainingDue)}</span>
               </div>
             )}
 
             {remainingDue === 0 && grandTotal > 0 && (
               <div className="billing-summary-row billing-paid-full">
-                <span className="billing-summary-label">✅ Fully Paid</span>
+                <span className="billing-summary-label">✅ {t('billing.fullyPaid')}</span>
               </div>
             )}
           </div>
@@ -915,21 +917,21 @@ const Billing = ({ readOnly = false }) => {
               onClick={() => handleSaveInvoice(false)}
               disabled={invoiceItems.length === 0 || saving || readOnly}
             >
-              {saving ? 'Saving...' : 'Save'}
+              {saving ? t('common.loading') : t('common.save')}
             </button>
             <button
               className="billing-btn billing-btn-save-print"
               onClick={() => handleSaveInvoice(true)}
               disabled={invoiceItems.length === 0 || saving || readOnly}
             >
-              {saving ? 'Saving...' : 'Save & Print'}
+              {saving ? t('common.loading') : t('billing.saveAndPrint')}
             </button>
             <button
               className="billing-btn billing-btn-cancel"
               onClick={handleCancelBill}
               disabled={invoiceItems.length === 0}
             >
-              Cancel
+              {t('common.cancel')}
             </button>
           </div>
         </div>

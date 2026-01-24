@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { productsAPI, categoriesAPI } from '../services/api';
 import Pagination from './Pagination';
 import './RateList.css';
 
 const RateList = ({ readOnly = false }) => {
+  const { t } = useTranslation();
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState(null);
@@ -33,7 +35,7 @@ const RateList = ({ readOnly = false }) => {
       setError(null);
     } catch (err) {
       console.error('Error fetching data:', err);
-      setError(err.response?.data?.error || 'Failed to load rate list');
+      setError(err.response?.data?.error || t('rateList.failedToLoad'));
       setProducts([]);
       setCategories([]);
     } finally {
@@ -91,7 +93,7 @@ const RateList = ({ readOnly = false }) => {
       setModalOpen(false);
       setEditingProduct(null);
     } catch (err) {
-      alert(err.response?.data?.error || 'Failed to update prices');
+      alert(err.response?.data?.error || t('rateList.failedToUpdatePrices'));
       throw err;
     }
   };
@@ -119,7 +121,7 @@ const RateList = ({ readOnly = false }) => {
 
   // Group products by category
   const groupedProducts = filteredProducts.reduce((acc, product) => {
-    const catName = product.category_name || product.category || 'Uncategorized';
+    const catName = product.category_name || product.category || t('rateList.uncategorized');
     if (!acc[catName]) acc[catName] = [];
     acc[catName].push(product);
     return acc;
@@ -142,14 +144,14 @@ const RateList = ({ readOnly = false }) => {
   }, [searchQuery, selectedCategory]);
 
   if (loading) {
-    return <div className="content-container"><div className="loading">Loading rate list...</div></div>;
+    return <div className="content-container"><div className="loading">{t('rateList.loading')}</div></div>;
   }
 
   return (
     <div className="content-container">
       <div className="page-header">
-        <h1 className="page-title">Rate List</h1>
-        <p className="page-subtitle">Product prices for reference</p>
+        <h1 className="page-title">{t('rateList.title')}</h1>
+        <p className="page-subtitle">{t('rateList.subtitle')}</p>
       </div>
 
       {error && <div className="error-message">{error}</div>}
@@ -159,18 +161,18 @@ const RateList = ({ readOnly = false }) => {
         <div style={{ padding: '16px' }}>
           <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr auto', gap: '16px', alignItems: 'flex-end' }}>
             <div>
-              <label className="form-label" style={{ marginBottom: '8px', display: 'block' }}>Search by Product Name</label>
+              <label className="form-label" style={{ marginBottom: '8px', display: 'block' }}>{t('rateList.searchByProductName')}</label>
               <input
                 type="text"
                 className="form-input"
-                placeholder="Search items..."
+                placeholder={t('rateList.searchPlaceholder')}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 style={{ fontSize: '14px' }}
               />
             </div>
             <div>
-              <label className="form-label" style={{ marginBottom: '8px', display: 'block' }}>Category</label>
+              <label className="form-label" style={{ marginBottom: '8px', display: 'block' }}>{t('rateList.category')}</label>
               <select 
                 className="form-input" 
                 value={selectedCategory || ''} 
@@ -179,7 +181,7 @@ const RateList = ({ readOnly = false }) => {
                 }}
                 style={{ fontSize: '14px' }}
               >
-                <option value="">All Categories</option>
+                <option value="">{t('rateList.allCategories')}</option>
                 {categories.filter(c => c.status === 'active').map(cat => (
                   <option key={cat.category_id} value={cat.category_id}>{cat.category_name}</option>
                 ))}
@@ -194,7 +196,7 @@ const RateList = ({ readOnly = false }) => {
                 }}
                 style={{ whiteSpace: 'nowrap' }}
               >
-                Clear All
+                {t('rateList.clearAll')}
               </button>
             </div>
           </div>
@@ -207,17 +209,17 @@ const RateList = ({ readOnly = false }) => {
           <table className="rate-list-table">
             <thead>
               <tr>
-                <th>Item Name</th>
-                <th>Unit</th>
-                <th>Retail Price</th>
-                <th>Wholesale Price</th>
-                <th>Special Price</th>
-                {!readOnly && <th>Actions</th>}
+                <th>{t('rateList.itemName')}</th>
+                <th>{t('rateList.unit')}</th>
+                <th>{t('rateList.retailPrice')}</th>
+                <th>{t('rateList.wholesalePrice')}</th>
+                <th>{t('rateList.specialPrice')}</th>
+                {!readOnly && <th>{t('common.actions')}</th>}
               </tr>
             </thead>
             <tbody>
               {paginatedProducts.length === 0 ? (
-                <tr><td colSpan={readOnly ? 5 : 6} className="empty-state">No products found{searchQuery ? ' matching your search' : ''}</td></tr>
+                <tr><td colSpan={readOnly ? 5 : 6} className="empty-state">{t('rateList.noProductsFound')}{searchQuery ? ` ${t('rateList.matchingSearch')}` : ''}</td></tr>
               ) : (
                 paginatedProducts.map((item, index) => {
                   if (item.type === 'header') {
@@ -246,7 +248,7 @@ const RateList = ({ readOnly = false }) => {
                               onClick={() => handleEdit(product)}
                               style={{ padding: '4px 12px', fontSize: '13px' }}
                             >
-                              Edit
+                              {t('common.edit')}
                             </button>
                           </td>
                         )}
@@ -291,6 +293,7 @@ const RateList = ({ readOnly = false }) => {
 
 // Price Edit Modal Component
 const PriceEditModal = ({ product, onSave, onClose }) => {
+  const { t } = useTranslation();
   const [formData, setFormData] = useState({
     retail_price: product.retail_price || product.selling_price || '',
     wholesale_price: product.wholesale_price || product.retail_price || product.selling_price || '',
@@ -322,20 +325,20 @@ const PriceEditModal = ({ product, onSave, onClose }) => {
     // Retail price validation
     const retailPrice = parseFloat(formData.retail_price);
     if (isNaN(retailPrice) || retailPrice <= 0) {
-      newErrors.retail_price = 'Retail price must be greater than 0';
+      newErrors.retail_price = t('rateList.retailPriceMustBeGreaterThanZero');
     }
 
     // Wholesale price validation
     const wholesalePrice = parseFloat(formData.wholesale_price);
     if (isNaN(wholesalePrice) || wholesalePrice <= 0) {
-      newErrors.wholesale_price = 'Wholesale price must be greater than 0';
+      newErrors.wholesale_price = t('rateList.wholesalePriceMustBeGreaterThanZero');
     }
 
     // Special price validation (optional)
     if (formData.special_price && formData.special_price.trim() !== '') {
       const specialPrice = parseFloat(formData.special_price);
       if (isNaN(specialPrice) || specialPrice < 0) {
-        newErrors.special_price = 'Special price must be 0 or greater';
+        newErrors.special_price = t('rateList.specialPriceMustBeZeroOrGreater');
       }
     }
 
@@ -370,7 +373,7 @@ const PriceEditModal = ({ product, onSave, onClose }) => {
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '600px' }}>
         <div className="modal-header">
-          <h2>Edit Prices - {product.item_name_english || product.name || 'N/A'}</h2>
+          <h2>{t('rateList.editPrices')} - {product.item_name_english || product.name || 'N/A'}</h2>
           <button className="modal-close" onClick={onClose}>×</button>
         </div>
         <form onSubmit={handleSubmit} className="modal-content">
@@ -384,25 +387,25 @@ const PriceEditModal = ({ product, onSave, onClose }) => {
           }}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', fontSize: '14px' }}>
               <div>
-                <strong style={{ color: '#64748b' }}>Product Name:</strong>
+                <strong style={{ color: '#64748b' }}>{t('rateList.productName')}:</strong>
                 <div style={{ marginTop: '4px', color: '#1e293b' }}>
                   {product.item_name_english || product.name || 'N/A'}
                 </div>
               </div>
               <div>
-                <strong style={{ color: '#64748b' }}>Unit:</strong>
+                <strong style={{ color: '#64748b' }}>{t('rateList.unit')}:</strong>
                 <div style={{ marginTop: '4px', color: '#1e293b' }}>
                   {product.unit_type || 'piece'}
                 </div>
               </div>
               <div>
-                <strong style={{ color: '#64748b' }}>Purchase Price:</strong>
+                <strong style={{ color: '#64748b' }}>{t('rateList.purchasePrice')}:</strong>
                 <div style={{ marginTop: '4px', color: '#1e293b' }}>
                   {formatCurrency(product.purchase_price)}
                 </div>
               </div>
               <div>
-                <strong style={{ color: '#64748b' }}>Current Stock:</strong>
+                <strong style={{ color: '#64748b' }}>{t('rateList.currentStock')}:</strong>
                 <div style={{ marginTop: '4px', color: '#1e293b' }}>
                   {product.quantity_in_stock || 0} {product.unit_type || 'piece'}
                 </div>
@@ -413,7 +416,7 @@ const PriceEditModal = ({ product, onSave, onClose }) => {
           {/* Editable Price Fields */}
           <div className="form-group">
             <label className="form-label">
-              Retail Price (PKR) <span className="required">*</span>
+              {t('rateList.retailPrice')} (PKR) <span className="required">*</span>
             </label>
             <input
               type="number"
@@ -432,7 +435,7 @@ const PriceEditModal = ({ product, onSave, onClose }) => {
 
           <div className="form-group">
             <label className="form-label">
-              Wholesale Price (PKR) <span className="required">*</span>
+              {t('rateList.wholesalePrice')} (PKR) <span className="required">*</span>
             </label>
             <input
               type="number"
@@ -451,7 +454,7 @@ const PriceEditModal = ({ product, onSave, onClose }) => {
 
           <div className="form-group">
             <label className="form-label">
-              Special Price (PKR) <span style={{ fontSize: '12px', color: '#64748b' }}>(Optional)</span>
+              {t('rateList.specialPrice')} (PKR) <span style={{ fontSize: '12px', color: '#64748b' }}>({t('common.optional')})</span>
             </label>
             <input
               type="number"
@@ -461,22 +464,22 @@ const PriceEditModal = ({ product, onSave, onClose }) => {
               value={formData.special_price}
               onChange={handleChange}
               className={`form-input ${errors.special_price ? 'error' : ''}`}
-              placeholder="Leave empty to remove"
+              placeholder={t('rateList.leaveEmptyToRemove')}
             />
             {errors.special_price && (
               <span className="error-message">{errors.special_price}</span>
             )}
             <small style={{ color: '#64748b', fontSize: '12px', marginTop: '4px', display: 'block' }}>
-              Leave empty to remove special price
+              {t('rateList.leaveEmptyToRemoveSpecialPrice')}
             </small>
           </div>
 
           <div className="modal-actions">
             <button type="button" className="btn btn-secondary" onClick={onClose} disabled={saving}>
-              Cancel
+              {t('common.cancel')}
             </button>
             <button type="submit" className="btn btn-primary" disabled={saving}>
-              {saving ? 'Saving...' : 'Save Prices'}
+              {saving ? t('common.loading') : t('rateList.savePrices')}
             </button>
           </div>
         </form>

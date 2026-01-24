@@ -1,0 +1,56 @@
+.license-banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
+  color: white;
+  padding: 12px 20px;
+  z-index: 10000;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  border-bottom: 2px solid rgba(255, 255, 255, 0.2);
+}
+
+.license-banner-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  max-width: 1200px;
+  margin: 0 auto;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.license-banner-icon {
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.license-banner-message {
+  flex: 1;
+  text-align: center;
+}
+
+.license-banner-link {
+  color: white;
+  text-decoration: underline;
+  font-weight: 600;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: opacity 0.2s;
+}
+
+.license-banner-link:hover {
+  opacity: 0.8;
+}
+
+/* Adjust main content to account for banner */
+.app {
+  padding-top: 50px; /* Space for banner */
+}
+
+
+
+
+

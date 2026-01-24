@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { reportsAPI } from '../services/api';
 import './Dashboard.css';
 
 const Dashboard = () => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [dashboardData, setDashboardData] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -57,7 +59,7 @@ const Dashboard = () => {
   if (loading) {
     return (
       <div className="content-container">
-        <div className="loading">Loading dashboard...</div>
+        <div className="loading">{t('dashboard.loading')}</div>
       </div>
     );
   }
@@ -65,7 +67,7 @@ const Dashboard = () => {
   if (!dashboardData) {
     return (
       <div className="content-container">
-        <div className="error-message">Failed to load dashboard data</div>
+        <div className="error-message">{t('dashboard.failedToLoad')}</div>
       </div>
     );
   }
@@ -73,8 +75,8 @@ const Dashboard = () => {
   return (
     <div className="content-container">
       <div className="page-header">
-        <h1 className="page-title">Aaj ka Haal</h1>
-        <p className="page-subtitle">Today's Business Status</p>
+        <h1 className="page-title">{t('dashboard.title')}</h1>
+        <p className="page-subtitle">{t('dashboard.subtitle')}</p>
       </div>
 
       {/* Summary Cards - 6 Cards */}
@@ -82,7 +84,7 @@ const Dashboard = () => {
         <div className="dashboard-summary-card">
           <div className="summary-card-icon">💰</div>
           <div className="summary-card-content">
-            <div className="summary-card-label">Today Sale</div>
+            <div className="summary-card-label">{t('dashboard.todaySale')}</div>
             <div className="summary-card-value">{formatCurrency(dashboardData.todaySale)}</div>
           </div>
         </div>
@@ -90,7 +92,7 @@ const Dashboard = () => {
         <div className="dashboard-summary-card">
           <div className="summary-card-icon">📈</div>
           <div className="summary-card-content">
-            <div className="summary-card-label">Today Profit</div>
+            <div className="summary-card-label">{t('dashboard.todayProfit')}</div>
             <div className={`summary-card-value ${dashboardData.todayProfit >= 0 ? 'profit-positive' : 'profit-negative'}`}>
               {formatCurrency(dashboardData.todayProfit)}
             </div>
@@ -100,7 +102,7 @@ const Dashboard = () => {
         <div className="dashboard-summary-card">
           <div className="summary-card-icon">💵</div>
           <div className="summary-card-content">
-            <div className="summary-card-label">Cash in Hand</div>
+            <div className="summary-card-label">{t('dashboard.cashInHand')}</div>
             <div className="summary-card-value">{formatCurrency(dashboardData.cashInHand)}</div>
           </div>
         </div>
@@ -111,9 +113,9 @@ const Dashboard = () => {
         >
           <div className="summary-card-icon">👥</div>
           <div className="summary-card-content">
-            <div className="summary-card-label">Customer Due</div>
+            <div className="summary-card-label">{t('dashboard.customerDue')}</div>
             <div className="summary-card-value profit-negative">{formatCurrency(dashboardData.customerDue)}</div>
-            <div className="summary-card-hint">Click to view list</div>
+            <div className="summary-card-hint">{t('dashboard.clickToViewList')}</div>
           </div>
         </div>
 
@@ -123,9 +125,9 @@ const Dashboard = () => {
         >
           <div className="summary-card-icon">🏪</div>
           <div className="summary-card-content">
-            <div className="summary-card-label">Supplier Due</div>
+            <div className="summary-card-label">{t('dashboard.supplierDue')}</div>
             <div className="summary-card-value profit-negative">{formatCurrency(dashboardData.supplierDue)}</div>
-            <div className="summary-card-hint">Click to view list</div>
+            <div className="summary-card-hint">{t('dashboard.clickToViewList')}</div>
           </div>
         </div>
 
@@ -135,9 +137,9 @@ const Dashboard = () => {
         >
           <div className="summary-card-icon">⚠️</div>
           <div className="summary-card-content">
-            <div className="summary-card-label">Low Stock Items</div>
+            <div className="summary-card-label">{t('dashboard.lowStockItems')}</div>
             <div className="summary-card-value">{dashboardData.lowStockCount}</div>
-            <div className="summary-card-hint">Click to view list</div>
+            <div className="summary-card-hint">{t('dashboard.clickToViewList')}</div>
           </div>
         </div>
       </div>
@@ -148,15 +150,15 @@ const Dashboard = () => {
         <div className="dashboard-section">
           <div className="card">
             <div className="card-header">
-              <h2>Top Selling Items (Today)</h2>
+              <h2>{t('dashboard.topSellingItems')} ({t('dashboard.todaySale')})</h2>
             </div>
             <div className="card-content">
               {dashboardData.topSellingItems && dashboardData.topSellingItems.length > 0 ? (
                 <table className="dashboard-table">
                   <thead>
                     <tr>
-                      <th>Item Name</th>
-                      <th>Quantity Sold</th>
+                      <th>{t('common.name')}</th>
+                      <th>{t('dashboard.quantitySold')}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -169,7 +171,7 @@ const Dashboard = () => {
                   </tbody>
                 </table>
               ) : (
-                <p className="empty-message">No sales today yet.</p>
+                <p className="empty-message">{t('dashboard.noSalesToday')}</p>
               )}
             </div>
           </div>
@@ -179,16 +181,16 @@ const Dashboard = () => {
         <div className="dashboard-section">
           <div className="card">
             <div className="card-header">
-              <h2>Recent Bills (Today)</h2>
+              <h2>{t('dashboard.recentBills')} ({t('dashboard.todaySale')})</h2>
             </div>
             <div className="card-content">
               {dashboardData.recentBills && dashboardData.recentBills.length > 0 ? (
                 <table className="dashboard-table">
                   <thead>
                     <tr>
-                      <th>Bill No</th>
-                      <th>Customer Name</th>
-                      <th>Total Amount</th>
+                      <th>{t('billing.invoiceNumber')}</th>
+                      <th>{t('billing.customerName')}</th>
+                      <th>{t('common.total')}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -206,7 +208,7 @@ const Dashboard = () => {
                   </tbody>
                 </table>
               ) : (
-                <p className="empty-message">No bills today yet.</p>
+                <p className="empty-message">{t('dashboard.noBillsToday')}</p>
               )}
             </div>
           </div>

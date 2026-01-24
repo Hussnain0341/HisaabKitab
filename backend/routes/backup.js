@@ -1,105 +1,166 @@
 const express = require('express');
 const router = express.Router();
+const backupService = require('../utils/backupService');
+const backupScheduler = require('../utils/backupScheduler');
 const db = require('../db');
-const fs = require('fs');
-const path = require('path');
-const { exec } = require('child_process');
-const util = require('util');
 
-const execPromise = util.promisify(exec);
+/**
+ * Get backup status and settings
+ */
+router.get('/status', async (req, res) => {
+  try {
+    const settings = await backupService.getBackupSettings();
+    const lastBackup = await backupService.getLastBackupStatus();
+    
+    res.json({
+      success: true,
+      settings,
+      lastBackup,
+    });
+  } catch (error) {
+    console.error('Error getting backup status:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to get backup status',
+      message: error.message,
+    });
+  }
+});
 
-// Backup database to SQL file
+/**
+ * Create manual backup
+ */
 router.post('/create', async (req, res) => {
   try {
-    const dbConfig = {
-      host: process.env.DB_HOST || 'localhost',
-      port: process.env.DB_PORT || 5432,
-      database: process.env.DB_NAME || 'hisaabkitab',
-      user: process.env.DB_USER || 'postgres',
-      password: process.env.DB_PASSWORD || 'postgres',
-    };
-
-    // Create backup directory if it doesn't exist
-    const backupDir = path.join(__dirname, '../../backups');
-    if (!fs.existsSync(backupDir)) {
-      fs.mkdirSync(backupDir, { recursive: true });
-    }
-
-    // Generate backup filename with timestamp
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').split('T')[0];
-    const backupFileName = `hisaabkitab_backup_${timestamp}.sql`;
-    const backupPath = path.join(backupDir, backupFileName);
-
-    // Build pg_dump command
-    const pgDumpCmd = `pg_dump -h ${dbConfig.host} -p ${dbConfig.port} -U ${dbConfig.user} -d ${dbConfig.database} -f "${backupPath}"`;
-
-    // Set PGPASSWORD environment variable
-    process.env.PGPASSWORD = dbConfig.password;
-
-    try {
-      // Execute pg_dump
-      await execPromise(pgDumpCmd);
-      
-      // Read the backup file to send to client
-      const backupContent = fs.readFileSync(backupPath, 'utf8');
-
-      res.json({
-        success: true,
-        message: 'Backup created successfully',
-        filename: backupFileName,
-        size: fs.statSync(backupPath).size,
-        data: backupContent, // Send SQL content for download
-      });
-    } catch (error) {
-      console.error('pg_dump error:', error);
-      throw new Error('Failed to create backup. Make sure pg_dump is installed and accessible.');
-    }
+    const result = await backupService.createBackup();
+    
+    // Apply retention policy after backup
+    await backupService.applyRetentionPolicy();
+    
+    res.json({
+      success: true,
+      message: 'Backup created successfully',
+      filename: result.filename,
+      size: result.size,
+      date: result.date,
+    });
   } catch (error) {
     console.error('Error creating backup:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to create backup',
-      message: error.message
+      message: error.message,
     });
   }
 });
 
-// List available backups
+/**
+ * Update backup settings
+ */
+router.put('/settings', async (req, res) => {
+  try {
+    const { enabled, mode, scheduledTime, backupDir, retentionCount } = req.body;
+    
+    const settings = {
+      enabled: enabled !== undefined ? enabled : true,
+      mode: mode || 'scheduled',
+      scheduledTime: scheduledTime || '02:00',
+      backupDir: backupDir || backupService.DEFAULT_BACKUP_DIR,
+      retentionCount: retentionCount || 5,
+    };
+    
+    const saved = await backupService.saveBackupSettings(settings);
+    
+    if (saved) {
+      // Update scheduler
+      await backupScheduler.updateScheduler();
+      
+      res.json({
+        success: true,
+        message: 'Backup settings saved successfully',
+        settings,
+      });
+    } else {
+      res.status(500).json({
+        success: false,
+        error: 'Failed to save backup settings',
+      });
+    }
+  } catch (error) {
+    console.error('Error updating backup settings:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to update backup settings',
+      message: error.message,
+    });
+  }
+});
+
+/**
+ * List all backups
+ */
 router.get('/list', async (req, res) => {
   try {
-    const backupDir = path.join(__dirname, '../../backups');
-    
-    if (!fs.existsSync(backupDir)) {
-      return res.json({ backups: [] });
-    }
-
-    const files = fs.readdirSync(backupDir)
-      .filter(file => file.endsWith('.sql'))
-      .map(file => {
-        const filePath = path.join(backupDir, file);
-        const stats = fs.statSync(filePath);
-        return {
-          filename: file,
-          size: stats.size,
-          created: stats.birthtime,
-        };
-      })
-      .sort((a, b) => b.created - a.created); // Newest first
-
-    res.json({ backups: files });
+    const backups = await backupService.listBackups();
+    res.json({
+      success: true,
+      backups,
+    });
   } catch (error) {
     console.error('Error listing backups:', error);
-    res.status(500).json({ error: 'Failed to list backups', message: error.message });
+    res.status(500).json({
+      success: false,
+      error: 'Failed to list backups',
+      message: error.message,
+    });
+  }
+});
+
+/**
+ * Restore from backup
+ */
+router.post('/restore', async (req, res) => {
+  try {
+    const { filename } = req.body;
+    
+    if (!filename) {
+      // Get most recent backup
+      const mostRecent = await backupService.getMostRecentBackup();
+      if (!mostRecent) {
+        return res.status(400).json({
+          success: false,
+          error: 'No backup found to restore',
+        });
+      }
+      
+      // Restore most recent backup
+      await backupService.restoreBackup(mostRecent);
+      
+      res.json({
+        success: true,
+        message: 'Database restored successfully. Application will restart.',
+        filename: mostRecent,
+        restartRequired: true,
+      });
+    } else {
+      // Restore specific backup
+      await backupService.restoreBackup(filename);
+      
+      res.json({
+        success: true,
+        message: 'Database restored successfully. Application will restart.',
+        filename,
+        restartRequired: true,
+      });
+    }
+  } catch (error) {
+    console.error('Error restoring backup:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to restore backup',
+      message: error.message,
+    });
   }
 });
 
 module.exports = router;
-
-
-
-
-
-
-
-
-

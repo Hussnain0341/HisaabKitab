@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { suppliersAPI, supplierPaymentsAPI, purchasesAPI, productsAPI } from '../services/api';
 import Pagination from './Pagination';
 import './SupplierDetailView.css';
 import './Purchases.css';
 
 const SupplierDetailView = ({ supplierId, onClose, readOnly = false }) => {
+  const { t } = useTranslation();
   const [supplier, setSupplier] = useState(null);
   const [ledger, setLedger] = useState(null);
   const [payments, setPayments] = useState([]);
@@ -49,7 +51,7 @@ const SupplierDetailView = ({ supplierId, onClose, readOnly = false }) => {
       setSupplier(response.data);
     } catch (err) {
       console.error('Error fetching supplier details:', err);
-      setError(err.response?.data?.error || 'Failed to load supplier details');
+      setError(err.response?.data?.error || t('suppliers.failedToLoadDetails'));
     }
   };
 
@@ -61,7 +63,7 @@ const SupplierDetailView = ({ supplierId, onClose, readOnly = false }) => {
       setError(null);
     } catch (err) {
       console.error('Error fetching supplier ledger:', err);
-      setError(err.response?.data?.error || 'Failed to load supplier ledger');
+      setError(err.response?.data?.error || t('suppliers.failedToLoadLedger'));
     } finally {
       setLoading(false);
     }
@@ -109,7 +111,7 @@ const SupplierDetailView = ({ supplierId, onClose, readOnly = false }) => {
       await fetchLedger();
       setDeletePurchaseConfirm(null);
     } catch (err) {
-      alert(err.response?.data?.error || 'Failed to delete purchase');
+      alert(err.response?.data?.error || t('purchases.purchaseFailed'));
     }
   };
 
@@ -138,7 +140,7 @@ const SupplierDetailView = ({ supplierId, onClose, readOnly = false }) => {
       await fetchLedger();
       setDeletePaymentConfirm(null);
     } catch (err) {
-      alert(err.response?.data?.error || 'Failed to delete payment');
+      alert(err.response?.data?.error || t('suppliers.failedToDeletePayment'));
     }
   };
 
@@ -185,7 +187,7 @@ const SupplierDetailView = ({ supplierId, onClose, readOnly = false }) => {
   if (loading && !supplier) {
     return (
       <div className="content-container">
-        <div className="loading">Loading supplier details...</div>
+        <div className="loading">{t('common.loading')} {t('suppliers.supplierDetails').toLowerCase()}...</div>
       </div>
     );
   }
@@ -194,7 +196,7 @@ const SupplierDetailView = ({ supplierId, onClose, readOnly = false }) => {
     return (
       <div className="content-container">
         <div className="error-message">{error}</div>
-        <button className="btn btn-secondary" onClick={onClose}>Back to Suppliers</button>
+        <button className="btn btn-secondary" onClick={onClose}>{t('suppliers.backToSuppliers')}</button>
       </div>
     );
   }
@@ -206,11 +208,11 @@ const SupplierDetailView = ({ supplierId, onClose, readOnly = false }) => {
       <div className="page-header">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
-            <h1 className="page-title">Supplier Details</h1>
-            <p className="page-subtitle">View supplier information, payments, and purchases</p>
+            <h1 className="page-title">{t('suppliers.supplierDetails')}</h1>
+            <p className="page-subtitle">{t('suppliers.supplierDetailsSubtitle')}</p>
           </div>
           <button className="btn btn-secondary" onClick={onClose}>
-            ← Back to Suppliers
+            ← {t('suppliers.backToSuppliers')}
           </button>
         </div>
       </div>
@@ -224,13 +226,13 @@ const SupplierDetailView = ({ supplierId, onClose, readOnly = false }) => {
       {/* Supplier Information Card */}
       <div className="card" style={{ marginBottom: '20px' }}>
         <div className="card-header">
-          <h2>Supplier Information</h2>
+          <h2>{t('suppliers.supplierInformation')}</h2>
         </div>
         <div className="card-content">
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '24px', padding: '20px' }}>
             <div>
               <label style={{ fontSize: '12px', color: '#64748b', textTransform: 'uppercase', fontWeight: '600', display: 'block', marginBottom: '6px' }}>
-                Supplier Name
+                {t('suppliers.supplierName')}
               </label>
               <div style={{ fontSize: '18px', fontWeight: '700', color: '#1e293b' }}>
                 {supplier?.name || 'N/A'}
@@ -238,7 +240,7 @@ const SupplierDetailView = ({ supplierId, onClose, readOnly = false }) => {
             </div>
             <div>
               <label style={{ fontSize: '12px', color: '#64748b', textTransform: 'uppercase', fontWeight: '600', display: 'block', marginBottom: '6px' }}>
-                Phone Number
+                {t('suppliers.phone')}
               </label>
               <div style={{ fontSize: '16px', color: '#475569' }}>
                 {supplier?.contact_number || '-'}
@@ -246,7 +248,7 @@ const SupplierDetailView = ({ supplierId, onClose, readOnly = false }) => {
             </div>
             <div>
               <label style={{ fontSize: '12px', color: '#64748b', textTransform: 'uppercase', fontWeight: '600', display: 'block', marginBottom: '6px' }}>
-                Address
+                {t('suppliers.address')}
               </label>
               <div style={{ fontSize: '16px', color: '#475569' }}>
                 {supplier?.address || '-'}
@@ -254,7 +256,7 @@ const SupplierDetailView = ({ supplierId, onClose, readOnly = false }) => {
             </div>
             <div>
               <label style={{ fontSize: '12px', color: '#64748b', textTransform: 'uppercase', fontWeight: '600', display: 'block', marginBottom: '6px' }}>
-                Amount Already Owed
+                {t('suppliers.amountAlreadyOwed')}
               </label>
               <div style={{ fontSize: '16px', color: '#475569' }}>
                 {formatCurrency(supplier?.opening_balance || 0)}
@@ -262,7 +264,7 @@ const SupplierDetailView = ({ supplierId, onClose, readOnly = false }) => {
             </div>
             <div>
               <label style={{ fontSize: '12px', color: '#64748b', textTransform: 'uppercase', fontWeight: '600', display: 'block', marginBottom: '6px' }}>
-                Total Credit Purchases
+                {t('suppliers.totalCreditPurchases')}
               </label>
               <div style={{ fontSize: '16px', color: '#475569' }}>
                 {formatCurrency(supplier?.total_credit_purchases || 0)}
@@ -270,7 +272,7 @@ const SupplierDetailView = ({ supplierId, onClose, readOnly = false }) => {
             </div>
             <div>
               <label style={{ fontSize: '12px', color: '#64748b', textTransform: 'uppercase', fontWeight: '600', display: 'block', marginBottom: '6px' }}>
-                Total Paid
+                {t('suppliers.totalPaid')}
               </label>
               <div style={{ fontSize: '16px', color: '#475569' }}>
                 {formatCurrency(supplier?.total_paid || 0)}
@@ -290,7 +292,7 @@ const SupplierDetailView = ({ supplierId, onClose, readOnly = false }) => {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
                 <label style={{ fontSize: '12px', color: '#64748b', textTransform: 'uppercase', fontWeight: '600', display: 'block', marginBottom: '8px' }}>
-                  Current Payable Balance
+                  {t('suppliers.currentPayableBalance')}
                 </label>
                 <div style={{ 
                   fontSize: '28px', 
@@ -300,7 +302,7 @@ const SupplierDetailView = ({ supplierId, onClose, readOnly = false }) => {
                   {formatCurrency(balance)}
                 </div>
                 <p style={{ fontSize: '12px', color: '#64748b', marginTop: '8px', marginBottom: 0 }}>
-                  Balance = Amount Already Owed + Credit Purchases − Payments
+                  {t('suppliers.balanceFormula')}
                 </p>
               </div>
               <div style={{ 
@@ -311,7 +313,7 @@ const SupplierDetailView = ({ supplierId, onClose, readOnly = false }) => {
                 fontWeight: '600',
                 fontSize: '14px'
               }}>
-                {balance > 0 ? 'Amount Due' : balance === 0 ? 'All Paid' : 'Advance Paid'}
+                {balance > 0 ? t('suppliers.amountDue') : balance === 0 ? t('suppliers.allPaid') : t('suppliers.advancePaid')}
               </div>
             </div>
           </div>
@@ -326,19 +328,19 @@ const SupplierDetailView = ({ supplierId, onClose, readOnly = false }) => {
               className={`tab-button ${activeTab === 'ledger' ? 'active' : ''}`}
               onClick={() => setActiveTab('ledger')}
             >
-              Money History
+              {t('suppliers.moneyHistory')}
             </button>
             <button
               className={`tab-button ${activeTab === 'payments' ? 'active' : ''}`}
               onClick={() => setActiveTab('payments')}
             >
-              Payments
+              {t('suppliers.payments')}
             </button>
             <button
               className={`tab-button ${activeTab === 'purchases' ? 'active' : ''}`}
               onClick={() => setActiveTab('purchases')}
             >
-              Purchases
+              {t('purchases.title')}
             </button>
           </div>
         </div>
@@ -348,12 +350,12 @@ const SupplierDetailView = ({ supplierId, onClose, readOnly = false }) => {
           {activeTab === 'ledger' && (
             <div>
               {loading ? (
-                <div className="loading">Loading money history...</div>
+                <div className="loading">{t('common.loading')} {t('suppliers.moneyHistory').toLowerCase()}...</div>
               ) : !ledger || !ledger.transactions || ledger.transactions.length === 0 ? (
                 <div className="empty-state" style={{ padding: '40px', textAlign: 'center', backgroundColor: '#f8fafc', borderRadius: '8px', border: '2px dashed #cbd5e1' }}>
                   <div style={{ fontSize: '48px', marginBottom: '16px' }}>📊</div>
-                  <div style={{ fontSize: '16px', fontWeight: '600', color: '#475569', marginBottom: '8px' }}>No Transactions Found</div>
-                  <div style={{ fontSize: '14px', color: '#64748b' }}>No money history available for this supplier.</div>
+                  <div style={{ fontSize: '16px', fontWeight: '600', color: '#475569', marginBottom: '8px' }}>{t('suppliers.noTransactionsFound')}</div>
+                  <div style={{ fontSize: '14px', color: '#64748b' }}>{t('suppliers.noMoneyHistory')}</div>
                 </div>
               ) : (
                 <>
@@ -371,7 +373,7 @@ const SupplierDetailView = ({ supplierId, onClose, readOnly = false }) => {
                   }}>
                     <div style={{ padding: '16px', backgroundColor: '#ffffff', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
                       <label style={{ fontSize: '12px', color: '#64748b', fontWeight: '600', display: 'block', marginBottom: '8px', textTransform: 'uppercase' }}>
-                        Amount Already Owed
+                        {t('suppliers.amountAlreadyOwed')}
                       </label>
                       <div style={{ fontSize: '20px', fontWeight: '700', color: '#1e293b' }}>
                         {formatCurrency(ledger.opening_balance || 0)}
@@ -379,7 +381,7 @@ const SupplierDetailView = ({ supplierId, onClose, readOnly = false }) => {
                     </div>
                     <div style={{ padding: '16px', backgroundColor: '#ffffff', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
                       <label style={{ fontSize: '12px', color: '#64748b', fontWeight: '600', display: 'block', marginBottom: '8px', textTransform: 'uppercase' }}>
-                        Current Balance
+                        {t('suppliers.currentBalance')}
                       </label>
                       <div style={{ 
                         fontSize: '20px', 
@@ -391,7 +393,7 @@ const SupplierDetailView = ({ supplierId, onClose, readOnly = false }) => {
                     </div>
                     <div style={{ padding: '16px', backgroundColor: '#ffffff', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
                       <label style={{ fontSize: '12px', color: '#64748b', fontWeight: '600', display: 'block', marginBottom: '8px', textTransform: 'uppercase' }}>
-                        Total Transactions
+                        {t('suppliers.totalTransactions')}
                       </label>
                       <div style={{ fontSize: '20px', fontWeight: '700', color: '#1e293b' }}>
                         {ledger.transactions?.length || 0}
@@ -404,11 +406,11 @@ const SupplierDetailView = ({ supplierId, onClose, readOnly = false }) => {
                     <table className="ledger-table">
                       <thead>
                         <tr>
-                          <th>Date</th>
-                          <th>Type</th>
-                          <th>Description</th>
-                          <th style={{ textAlign: 'right' }}>Amount</th>
-                          <th style={{ textAlign: 'right' }}>Running Balance</th>
+                          <th>{t('common.date')}</th>
+                          <th>{t('suppliers.type')}</th>
+                          <th>{t('suppliers.description')}</th>
+                          <th style={{ textAlign: 'right' }}>{t('expenses.amount')}</th>
+                          <th style={{ textAlign: 'right' }}>{t('suppliers.runningBalance')}</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -422,17 +424,17 @@ const SupplierDetailView = ({ supplierId, onClose, readOnly = false }) => {
                               <td>{formatDateShort(transaction.transaction_date)}</td>
                               <td>
                                 <span className={`transaction-type-badge ${isPurchase ? 'purchase' : 'payment'}`}>
-                                  {isPurchase ? 'Purchase' : 'Payment'}
+                                  {isPurchase ? t('purchases.title') : t('suppliers.payment')}
                                 </span>
                               </td>
                               <td>
                                 <div>
                                   <div style={{ fontWeight: '500' }}>
-                                    {transaction.description || (isPurchase ? 'Credit Purchase' : 'Payment')}
+                                    {transaction.description || (isPurchase ? t('suppliers.creditPurchase') : t('suppliers.payment'))}
                                   </div>
                                   {transaction.payment_method && (
                                     <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>
-                                      Method: {transaction.payment_method}
+                                      {t('suppliers.method')}: {transaction.payment_method}
                                     </div>
                                   )}
                                 </div>
@@ -485,8 +487,8 @@ const SupplierDetailView = ({ supplierId, onClose, readOnly = false }) => {
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', paddingBottom: '16px', borderBottom: '2px solid #e2e8f0' }}>
                 <div>
-                  <h3 style={{ margin: '0 0 4px 0', fontSize: '20px', fontWeight: '700', color: '#1e293b' }}>Supplier Payments</h3>
-                  <p style={{ margin: 0, fontSize: '14px', color: '#64748b' }}>All payments made to this supplier</p>
+                  <h3 style={{ margin: '0 0 4px 0', fontSize: '20px', fontWeight: '700', color: '#1e293b' }}>{t('suppliers.supplierPayments')}</h3>
+                  <p style={{ margin: 0, fontSize: '14px', color: '#64748b' }}>{t('suppliers.allPaymentsToSupplier')}</p>
                 </div>
                 {!readOnly && (
                   <button
@@ -497,18 +499,18 @@ const SupplierDetailView = ({ supplierId, onClose, readOnly = false }) => {
                     }}
                     style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
                   >
-                    <span>+</span> Record Payment
+                    <span>+</span> {t('suppliers.recordPayment')}
                   </button>
                 )}
               </div>
 
               {loadingPayments ? (
-                <div className="loading">Loading payments...</div>
+                <div className="loading">{t('common.loading')} {t('suppliers.payments').toLowerCase()}...</div>
               ) : payments.length === 0 ? (
                 <div className="empty-state" style={{ padding: '60px 40px', textAlign: 'center', backgroundColor: '#f8fafc', borderRadius: '8px', border: '2px dashed #cbd5e1' }}>
                   <div style={{ fontSize: '64px', marginBottom: '16px' }}>💳</div>
-                  <div style={{ fontSize: '18px', fontWeight: '600', color: '#475569', marginBottom: '8px' }}>No Payments Found</div>
-                  <div style={{ fontSize: '14px', color: '#64748b', marginBottom: '20px' }}>No payment records found for this supplier.</div>
+                  <div style={{ fontSize: '18px', fontWeight: '600', color: '#475569', marginBottom: '8px' }}>{t('suppliers.noPaymentsFound')}</div>
+                  <div style={{ fontSize: '14px', color: '#64748b', marginBottom: '20px' }}>{t('suppliers.noPaymentRecords')}</div>
                   {!readOnly && (
                     <button
                       className="btn btn-primary"
@@ -517,7 +519,7 @@ const SupplierDetailView = ({ supplierId, onClose, readOnly = false }) => {
                         setPaymentModalOpen(true);
                       }}
                     >
-                      Record First Payment
+                      {t('suppliers.recordFirstPayment')}
                     </button>
                   )}
                 </div>
@@ -527,11 +529,11 @@ const SupplierDetailView = ({ supplierId, onClose, readOnly = false }) => {
                     <table className="supplier-payments-table">
                       <thead>
                         <tr>
-                          <th>Date</th>
-                          <th>Amount</th>
-                          <th>Payment Method</th>
-                          <th>Notes</th>
-                          {!readOnly && <th>Actions</th>}
+                          <th>{t('common.date')}</th>
+                          <th>{t('expenses.amount')}</th>
+                          <th>{t('expenses.paymentMethod')}</th>
+                          <th>{t('expenses.notes')}</th>
+                          {!readOnly && <th>{t('common.actions')}</th>}
                         </tr>
                       </thead>
                       <tbody>
@@ -556,13 +558,13 @@ const SupplierDetailView = ({ supplierId, onClose, readOnly = false }) => {
                                     setPaymentModalOpen(true);
                                   }}
                                 >
-                                  Edit
+                                  {t('common.edit')}
                                 </button>
                                 <button
                                   className="btn-delete"
                                   onClick={() => setDeletePaymentConfirm(payment.payment_id)}
                                 >
-                                  Delete
+                                  {t('common.delete')}
                                 </button>
                               </td>
                             )}
@@ -595,8 +597,8 @@ const SupplierDetailView = ({ supplierId, onClose, readOnly = false }) => {
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', paddingBottom: '16px', borderBottom: '2px solid #e2e8f0' }}>
                 <div>
-                  <h3 style={{ margin: '0 0 4px 0', fontSize: '20px', fontWeight: '700', color: '#1e293b' }}>Purchase History</h3>
-                  <p style={{ margin: 0, fontSize: '14px', color: '#64748b' }}>All purchases made from this supplier - View, Edit, or Delete purchases</p>
+                  <h3 style={{ margin: '0 0 4px 0', fontSize: '20px', fontWeight: '700', color: '#1e293b' }}>{t('suppliers.purchaseHistory')}</h3>
+                  <p style={{ margin: 0, fontSize: '14px', color: '#64748b' }}>{t('suppliers.allPurchasesFromSupplier')}</p>
                 </div>
                 {!readOnly && (
                   <button
@@ -604,24 +606,24 @@ const SupplierDetailView = ({ supplierId, onClose, readOnly = false }) => {
                     onClick={() => setNewPurchaseModalOpen(true)}
                     style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
                   >
-                    <span>+</span> New Purchase
+                    <span>+</span> {t('purchases.newPurchase')}
                   </button>
                 )}
               </div>
 
               {loadingPurchases ? (
-                <div className="loading">Loading purchases...</div>
+                <div className="loading">{t('common.loading')} {t('purchases.title').toLowerCase()}...</div>
               ) : purchases.length === 0 ? (
                   <div className="empty-state" style={{ padding: '60px 40px', textAlign: 'center', backgroundColor: '#f8fafc', borderRadius: '8px', border: '2px dashed #cbd5e1' }}>
                   <div style={{ fontSize: '64px', marginBottom: '16px' }}>🛒</div>
-                  <div style={{ fontSize: '18px', fontWeight: '600', color: '#475569', marginBottom: '8px' }}>No Purchases Found</div>
-                  <div style={{ fontSize: '14px', color: '#64748b', marginBottom: '20px' }}>No purchase records found for this supplier.</div>
+                  <div style={{ fontSize: '18px', fontWeight: '600', color: '#475569', marginBottom: '8px' }}>{t('suppliers.noPurchasesFound')}</div>
+                  <div style={{ fontSize: '14px', color: '#64748b', marginBottom: '20px' }}>{t('suppliers.noPurchaseRecords')}</div>
                   {!readOnly && (
                     <button
                       className="btn btn-primary"
                       onClick={() => setNewPurchaseModalOpen(true)}
                     >
-                      Create First Purchase
+                      {t('suppliers.createFirstPurchase')}
                     </button>
                   )}
                 </div>
@@ -631,12 +633,12 @@ const SupplierDetailView = ({ supplierId, onClose, readOnly = false }) => {
                     <table className="purchases-table" style={{ margin: 0 }}>
                       <thead>
                         <tr>
-                          <th>Purchase ID</th>
-                          <th>Date</th>
-                          <th>Items</th>
-                          <th style={{ textAlign: 'right' }}>Total Amount</th>
-                          <th>Payment Type</th>
-                          <th>Actions</th>
+                          <th>{t('purchases.purchaseId')}</th>
+                          <th>{t('common.date')}</th>
+                          <th>{t('purchases.items')}</th>
+                          <th style={{ textAlign: 'right' }}>{t('purchases.totalAmount')}</th>
+                          <th>{t('purchases.paymentType')}</th>
+                          <th>{t('common.actions')}</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -654,7 +656,7 @@ const SupplierDetailView = ({ supplierId, onClose, readOnly = false }) => {
                                 fontSize: '13px',
                                 fontWeight: '600'
                               }}>
-                                {purchase.item_count || 0} item{purchase.item_count !== 1 ? 's' : ''}
+                                {purchase.item_count || 0} {t('purchases.item', { count: purchase.item_count || 0 })}
                               </span>
                             </td>
                             <td style={{ textAlign: 'right', fontWeight: '700', fontSize: '15px', color: '#059669' }}>
@@ -673,11 +675,11 @@ const SupplierDetailView = ({ supplierId, onClose, readOnly = false }) => {
                                     const response = await purchasesAPI.getById(purchase.purchase_id);
                                     setViewingPurchase(response.data);
                                   } catch (err) {
-                                    alert('Failed to load purchase details');
+                                    alert(t('purchases.failedToLoadDetails'));
                                   }
                                 }}
                               >
-                                View
+                                {t('common.view')}
                               </button>
                               {!readOnly && (
                                 <>
@@ -688,17 +690,17 @@ const SupplierDetailView = ({ supplierId, onClose, readOnly = false }) => {
                                         const response = await purchasesAPI.getById(purchase.purchase_id);
                                         setEditingPurchase(response.data);
                                       } catch (err) {
-                                        alert('Failed to load purchase for editing');
+                                        alert(t('purchases.failedToLoadForEdit'));
                                       }
                                     }}
                                   >
-                                    Edit
+                                    {t('common.edit')}
                                   </button>
                                   <button
                                     className="btn-delete"
                                     onClick={() => setDeletePurchaseConfirm(purchase.purchase_id)}
                                   >
-                                    Delete
+                                    {t('common.delete')}
                                   </button>
                                 </>
                               )}
@@ -748,17 +750,17 @@ const SupplierDetailView = ({ supplierId, onClose, readOnly = false }) => {
       {deletePaymentConfirm && (
         <div className="modal-overlay" onClick={() => setDeletePaymentConfirm(null)}>
           <div className="modal delete-modal" onClick={(e) => e.stopPropagation()}>
-            <h3>Confirm Delete</h3>
-            <p>Are you sure you want to delete this payment? This will update the supplier balance.</p>
+            <h3>{t('common.confirmDelete')}</h3>
+            <p>{t('suppliers.deletePaymentConfirm')}</p>
             <div className="modal-actions">
               <button className="btn btn-secondary" onClick={() => setDeletePaymentConfirm(null)}>
-                Cancel
+                {t('common.cancel')}
               </button>
               <button
                 className="btn btn-danger"
                 onClick={() => handlePaymentDelete(deletePaymentConfirm)}
               >
-                Delete
+                {t('common.delete')}
               </button>
             </div>
           </div>
@@ -775,7 +777,7 @@ const SupplierDetailView = ({ supplierId, onClose, readOnly = false }) => {
             setViewingPurchase(null);
           }}
           onDelete={(purchaseId) => {
-            if (window.confirm('Are you sure you want to delete this purchase? This will reverse stock updates.')) {
+            if (window.confirm(t('suppliers.deletePurchaseConfirm'))) {
               handlePurchaseDelete(purchaseId);
               setViewingPurchase(null);
             }
@@ -818,11 +820,11 @@ const SupplierDetailView = ({ supplierId, onClose, readOnly = false }) => {
       {deletePurchaseConfirm && (
         <div className="modal-overlay" onClick={() => setDeletePurchaseConfirm(null)}>
           <div className="modal delete-modal" onClick={(e) => e.stopPropagation()}>
-            <h3>Confirm Delete</h3>
-            <p>Are you sure you want to delete this purchase? This will reverse stock updates and supplier balance.</p>
+            <h3>{t('common.confirmDelete')}</h3>
+            <p>{t('suppliers.deletePurchaseConfirmFull')}</p>
             <div className="modal-actions">
               <button className="btn btn-secondary" onClick={() => setDeletePurchaseConfirm(null)}>
-                Cancel
+                {t('common.cancel')}
               </button>
               <button
                 className="btn btn-danger"
@@ -831,7 +833,7 @@ const SupplierDetailView = ({ supplierId, onClose, readOnly = false }) => {
                   setDeletePurchaseConfirm(null);
                 }}
               >
-                Delete
+                {t('common.delete')}
               </button>
             </div>
           </div>
@@ -843,6 +845,7 @@ const SupplierDetailView = ({ supplierId, onClose, readOnly = false }) => {
 
 // Purchase Detail Modal Component
 const PurchaseDetailModal = ({ purchase, onClose, onEdit, onDelete, readOnly }) => {
+  const { t } = useTranslation();
   const formatCurrency = (amount) => `PKR ${Number(amount || 0).toFixed(2)}`;
   const formatDate = (date) => new Date(date).toLocaleDateString('en-PK', {
     year: 'numeric',
@@ -856,7 +859,7 @@ const PurchaseDetailModal = ({ purchase, onClose, onEdit, onDelete, readOnly }) 
     <div className="modal-overlay" onClick={onClose} style={{ zIndex: 2000 }}>
       <div className="modal" style={{ maxWidth: '900px', maxHeight: '90vh', overflowY: 'auto', zIndex: 2001, backgroundColor: '#ffffff' }} onClick={(e) => e.stopPropagation()}>
         <div className="modal-header" style={{ borderBottom: '1px solid #e2e8f0', padding: '20px', backgroundColor: '#f8fafc' }}>
-          <h2 style={{ margin: 0, fontSize: '20px', fontWeight: '700', color: '#1e293b' }}>Purchase Details</h2>
+          <h2 style={{ margin: 0, fontSize: '20px', fontWeight: '700', color: '#1e293b' }}>{t('purchases.purchaseDetails')}</h2>
           <button className="modal-close" onClick={onClose} style={{ fontSize: '24px', color: '#64748b' }}>×</button>
         </div>
 
@@ -864,24 +867,24 @@ const PurchaseDetailModal = ({ purchase, onClose, onEdit, onDelete, readOnly }) 
           {/* Purchase Information Card */}
           <div className="card" style={{ marginBottom: '20px' }}>
             <div className="card-header">
-              <h2>Purchase Information</h2>
+              <h2>{t('purchases.purchaseInformation')}</h2>
             </div>
             <div className="card-content">
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px', padding: '20px' }}>
             <div>
-              <label style={{ fontSize: '12px', color: '#64748b', textTransform: 'uppercase', fontWeight: '600', display: 'block', marginBottom: '6px' }}>Purchase ID</label>
+              <label style={{ fontSize: '12px', color: '#64748b', textTransform: 'uppercase', fontWeight: '600', display: 'block', marginBottom: '6px' }}>{t('purchases.purchaseId')}</label>
               <div style={{ fontSize: '18px', fontWeight: '700', color: '#1e293b' }}>#{purchase.purchase_id}</div>
             </div>
             <div>
-              <label style={{ fontSize: '12px', color: '#64748b', textTransform: 'uppercase', fontWeight: '600', display: 'block', marginBottom: '6px' }}>Supplier</label>
+              <label style={{ fontSize: '12px', color: '#64748b', textTransform: 'uppercase', fontWeight: '600', display: 'block', marginBottom: '6px' }}>{t('purchases.supplier')}</label>
               <div style={{ fontSize: '16px', fontWeight: '600', color: '#1e293b' }}>{purchase.supplier_name || 'N/A'}</div>
             </div>
             <div>
-              <label style={{ fontSize: '12px', color: '#64748b', textTransform: 'uppercase', fontWeight: '600', display: 'block', marginBottom: '6px' }}>Date</label>
+              <label style={{ fontSize: '12px', color: '#64748b', textTransform: 'uppercase', fontWeight: '600', display: 'block', marginBottom: '6px' }}>{t('common.date')}</label>
               <div style={{ fontSize: '16px', color: '#475569' }}>{formatDate(purchase.date)}</div>
             </div>
             <div>
-              <label style={{ fontSize: '12px', color: '#64748b', textTransform: 'uppercase', fontWeight: '600', display: 'block', marginBottom: '6px' }}>Payment Type</label>
+              <label style={{ fontSize: '12px', color: '#64748b', textTransform: 'uppercase', fontWeight: '600', display: 'block', marginBottom: '6px' }}>{t('purchases.paymentType')}</label>
               <div>
                 <span className={`payment-badge ${purchase.payment_type || 'cash'}`} style={{ textTransform: 'capitalize' }}>
                   {purchase.payment_type || 'cash'}
@@ -889,11 +892,11 @@ const PurchaseDetailModal = ({ purchase, onClose, onEdit, onDelete, readOnly }) 
               </div>
             </div>
             <div>
-              <label style={{ fontSize: '12px', color: '#64748b', textTransform: 'uppercase', fontWeight: '600', display: 'block', marginBottom: '6px' }}>Total Items</label>
-              <div style={{ fontSize: '16px', color: '#475569' }}>{purchase.items?.length || 0} item(s)</div>
+              <label style={{ fontSize: '12px', color: '#64748b', textTransform: 'uppercase', fontWeight: '600', display: 'block', marginBottom: '6px' }}>{t('purchases.totalItems')}</label>
+              <div style={{ fontSize: '16px', color: '#475569' }}>{purchase.items?.length || 0} {t('purchases.items')}</div>
             </div>
             <div>
-              <label style={{ fontSize: '12px', color: '#64748b', textTransform: 'uppercase', fontWeight: '600', display: 'block', marginBottom: '6px' }}>Total Amount</label>
+              <label style={{ fontSize: '12px', color: '#64748b', textTransform: 'uppercase', fontWeight: '600', display: 'block', marginBottom: '6px' }}>{t('purchases.totalAmount')}</label>
               <div style={{ fontSize: '20px', fontWeight: '700', color: '#059669' }}>{formatCurrency(purchase.total_amount)}</div>
             </div>
               </div>
@@ -903,16 +906,16 @@ const PurchaseDetailModal = ({ purchase, onClose, onEdit, onDelete, readOnly }) 
           {/* Items Table Card */}
           <div className="card">
             <div className="card-header">
-              <h2>Purchase Items</h2>
+              <h2>{t('purchases.purchaseItems')}</h2>
             </div>
             <div className="table-container">
               <table className="items-table">
                 <thead>
                   <tr>
-                    <th>Product Name</th>
-                    <th>Quantity</th>
-                    <th>Cost Price</th>
-                    <th style={{ textAlign: 'right' }}>Subtotal</th>
+                    <th>{t('inventory.productName')}</th>
+                    <th>{t('billing.qty')}</th>
+                    <th>{t('purchases.costPrice')}</th>
+                    <th style={{ textAlign: 'right' }}>{t('billing.subtotal')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -927,13 +930,13 @@ const PurchaseDetailModal = ({ purchase, onClose, onEdit, onDelete, readOnly }) 
                     ))
                   ) : (
                     <tr>
-                      <td colSpan="4" className="empty-state">No items found</td>
+                      <td colSpan="4" className="empty-state">{t('purchases.noItemsFound')}</td>
                     </tr>
                   )}
                 </tbody>
                 <tfoot>
                   <tr>
-                    <td colSpan="3" style={{ textAlign: 'right', fontWeight: '700', padding: '16px' }}>Total:</td>
+                    <td colSpan="3" style={{ textAlign: 'right', fontWeight: '700', padding: '16px' }}>{t('common.total')}:</td>
                     <td style={{ fontWeight: '700', fontSize: '18px', color: '#059669', padding: '16px', textAlign: 'right' }}>
                       {formatCurrency(purchase.total_amount)}
                     </td>
@@ -947,10 +950,10 @@ const PurchaseDetailModal = ({ purchase, onClose, onEdit, onDelete, readOnly }) 
           {!readOnly && (
             <div style={{ display: 'flex', gap: '12px', marginTop: '20px', paddingTop: '20px', borderTop: '1px solid #e2e8f0' }}>
               <button className="btn btn-primary" onClick={onEdit}>
-                Edit Purchase
+                {t('purchases.editPurchase')}
               </button>
               <button className="btn btn-danger" onClick={() => onDelete(purchase.purchase_id)}>
-                Delete Purchase
+                {t('purchases.deletePurchase')}
               </button>
             </div>
           )}
@@ -962,6 +965,7 @@ const PurchaseDetailModal = ({ purchase, onClose, onEdit, onDelete, readOnly }) 
 
 // Purchase Edit Modal Component (simplified version for supplier detail view)
 const PurchaseEditModal = ({ purchase, supplierId, supplierName, products, onSave, onClose }) => {
+  const { t } = useTranslation();
   const [formData, setFormData] = useState({
     supplier_id: supplierId.toString(),
     payment_type: purchase?.payment_type || 'cash',
@@ -1007,7 +1011,7 @@ const PurchaseEditModal = ({ purchase, supplierId, supplierName, products, onSav
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (formData.items.length === 0) {
-      alert('Please add at least one item');
+      alert(t('purchases.addAtLeastOneItem'));
       return;
     }
     setSaving(true);
@@ -1015,7 +1019,7 @@ const PurchaseEditModal = ({ purchase, supplierId, supplierName, products, onSav
       await purchasesAPI.update(purchase.purchase_id, formData);
       await onSave();
     } catch (err) {
-      alert(err.response?.data?.error || 'Failed to update purchase');
+      alert(err.response?.data?.error || t('purchases.failedToUpdatePurchase'));
     } finally {
       setSaving(false);
     }
@@ -1028,7 +1032,7 @@ const PurchaseEditModal = ({ purchase, supplierId, supplierName, products, onSav
     <div className="modal-overlay" onClick={onClose} style={{ zIndex: 2000 }}>
       <div className="modal purchase-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '800px', maxHeight: '90vh', overflowY: 'auto', zIndex: 2001 }}>
         <div className="modal-header">
-          <h2>{purchase ? `Edit Purchase #${purchase.purchase_id}` : 'New Purchase'}</h2>
+          <h2>{purchase ? t('purchases.editPurchaseId', { id: purchase.purchase_id }) : t('purchases.newPurchase')}</h2>
           <button className="modal-close" onClick={onClose}>×</button>
         </div>
         <form onSubmit={handleSubmit} className="modal-content">
@@ -1040,14 +1044,14 @@ const PurchaseEditModal = ({ purchase, supplierId, supplierName, products, onSav
           )}
           <div className="form-row">
             <div className="form-group">
-              <label className="form-label">Payment Type</label>
+              <label className="form-label">{t('purchases.paymentType')}</label>
               <select className="form-input" value={formData.payment_type} onChange={(e) => setFormData({...formData, payment_type: e.target.value})}>
-                <option value="cash">Cash</option>
-                <option value="credit">Credit</option>
+                <option value="cash">{t('billing.cash')}</option>
+                <option value="credit">{t('billing.credit')}</option>
               </select>
             </div>
             <div className="form-group">
-              <label className="form-label">Date</label>
+              <label className="form-label">{t('common.date')}</label>
               <input type="date" className="form-input" value={formData.date} onChange={(e) => setFormData({...formData, date: e.target.value})} />
             </div>
           </div>
@@ -1155,7 +1159,7 @@ const PurchaseEditModal = ({ purchase, supplierId, supplierName, products, onSav
 
           <div className="modal-actions">
             <button type="button" className="btn btn-secondary" onClick={onClose}>Cancel</button>
-            <button type="submit" className="btn btn-primary" disabled={saving}>{saving ? 'Saving...' : purchase ? 'Update Purchase' : 'Save Purchase'}</button>
+            <button type="submit" className="btn btn-primary" disabled={saving}>{saving ? t('common.loading') : purchase ? t('purchases.updatePurchase') : t('purchases.savePurchase')}</button>
           </div>
         </form>
       </div>
@@ -1165,6 +1169,7 @@ const PurchaseEditModal = ({ purchase, supplierId, supplierName, products, onSav
 
 // Payment Modal Component
 const SupplierPaymentModal = ({ payment, supplierId, supplierName, currentBalance, onClose, onSave }) => {
+  const { t } = useTranslation();
   const [formData, setFormData] = useState({
     amount: payment?.amount?.toString() || '',
     payment_method: payment?.payment_method || 'cash',
@@ -1179,11 +1184,11 @@ const SupplierPaymentModal = ({ payment, supplierId, supplierName, currentBalanc
 
     const amount = parseFloat(formData.amount);
     if (isNaN(amount) || amount <= 0) {
-      newErrors.amount = 'Amount must be greater than 0';
+      newErrors.amount = t('suppliers.amountMustBeGreaterThanZero');
     }
 
     if (amount > parseFloat(currentBalance || 0)) {
-      newErrors.amount = `Payment amount exceeds payable balance (${formatCurrency(currentBalance)})`;
+      newErrors.amount = t('suppliers.paymentExceedsBalance', { balance: formatCurrency(currentBalance) });
     }
 
     setErrors(newErrors);
@@ -1228,7 +1233,7 @@ const SupplierPaymentModal = ({ payment, supplierId, supplierName, currentBalanc
       }
       await onSave();
     } catch (err) {
-      const errorMessage = err.response?.data?.error || `Failed to ${payment ? 'update' : 'create'} payment`;
+      const errorMessage = err.response?.data?.error || t('suppliers.failedToSavePayment', { action: payment ? t('common.update') : t('common.create') });
       alert(errorMessage);
     } finally {
       setSaving(false);
@@ -1241,14 +1246,14 @@ const SupplierPaymentModal = ({ payment, supplierId, supplierName, currentBalanc
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal supplier-payment-modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <h2>{payment ? 'Edit Payment' : 'Record Supplier Payment'}</h2>
+          <h2>{payment ? t('suppliers.editPayment') : t('suppliers.recordSupplierPayment')}</h2>
           <button className="modal-close" onClick={onClose}>×</button>
         </div>
 
         <form onSubmit={handleSubmit} className="supplier-payment-form">
           <div className="form-group">
             <label className="form-label">
-              Supplier
+              {t('suppliers.supplier')}
             </label>
             <input
               type="text"
@@ -1261,7 +1266,7 @@ const SupplierPaymentModal = ({ payment, supplierId, supplierName, currentBalanc
 
           <div className="form-group">
             <label className="form-label">
-              Amount (PKR) <span className="required">*</span>
+              {t('expenses.amount')} (PKR) <span className="required">*</span>
             </label>
             <input
               type="number"
@@ -1275,29 +1280,29 @@ const SupplierPaymentModal = ({ payment, supplierId, supplierName, currentBalanc
             />
             {errors.amount && <span className="error-message">{errors.amount}</span>}
             <p className="form-help-text" style={{ fontSize: '12px', color: '#64748b', marginTop: '4px' }}>
-              Current Payable Balance: <strong>{formatCurrency(currentBalance)}</strong>
+              {t('suppliers.currentPayableBalance')}: <strong>{formatCurrency(currentBalance)}</strong>
             </p>
           </div>
 
           <div className="form-row">
             <div className="form-group">
-              <label className="form-label">Payment Method</label>
+              <label className="form-label">{t('expenses.paymentMethod')}</label>
               <select
                 name="payment_method"
                 value={formData.payment_method}
                 onChange={handleChange}
                 className="form-input"
               >
-                <option value="cash">Cash</option>
-                <option value="card">Card</option>
-                <option value="bank_transfer">Bank Transfer</option>
-                <option value="cheque">Cheque</option>
-                <option value="other">Other</option>
+                <option value="cash">{t('billing.cash')}</option>
+                <option value="card">{t('billing.card')}</option>
+                <option value="bank_transfer">{t('billing.bankTransfer')}</option>
+                <option value="cheque">{t('billing.cheque')}</option>
+                <option value="other">{t('billing.other')}</option>
               </select>
             </div>
 
             <div className="form-group">
-              <label className="form-label">Date</label>
+              <label className="form-label">{t('common.date')}</label>
               <input
                 type="date"
                 name="payment_date"
@@ -1309,13 +1314,13 @@ const SupplierPaymentModal = ({ payment, supplierId, supplierName, currentBalanc
           </div>
 
           <div className="form-group">
-            <label className="form-label">Notes (Optional)</label>
+            <label className="form-label">{t('expenses.notes')} ({t('common.optional')})</label>
             <textarea
               name="notes"
               value={formData.notes}
               onChange={handleChange}
               className="form-input"
-              placeholder="Payment notes..."
+              placeholder={t('suppliers.paymentNotesPlaceholder')}
               rows="3"
             />
           </div>
@@ -1327,14 +1332,14 @@ const SupplierPaymentModal = ({ payment, supplierId, supplierName, currentBalanc
               onClick={onClose}
               disabled={saving}
             >
-              Cancel
+              {t('common.cancel')}
             </button>
             <button
               type="submit"
               className="btn btn-primary"
               disabled={saving}
             >
-              {saving ? 'Saving...' : (payment ? 'Update Payment' : 'Record Payment')}
+              {saving ? t('common.loading') : (payment ? t('suppliers.updatePayment') : t('suppliers.recordPayment'))}
             </button>
           </div>
         </form>

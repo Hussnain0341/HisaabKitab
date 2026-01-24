@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { categoriesAPI, productsAPI } from '../services/api';
 import Pagination from './Pagination';
 import './Categories.css';
 
 const Categories = ({ readOnly = false }) => {
+  const { t } = useTranslation();
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -27,7 +29,7 @@ const Categories = ({ readOnly = false }) => {
       setError(null);
     } catch (err) {
       console.error('Error fetching categories:', err);
-      setError(err.response?.data?.error || 'Failed to load categories');
+      setError(err.response?.data?.error || t('categories.failedToLoad'));
     } finally {
       setLoading(false);
     }
@@ -51,15 +53,15 @@ const Categories = ({ readOnly = false }) => {
   const handleDelete = async (categoryId) => {
     const category = categories.find(c => c.category_id === categoryId);
     if (category && category.category_name.toLowerCase() === 'general') {
-      alert('Cannot delete "General" Product Category. It is required by the system.');
+      alert(t('categories.cannotDeleteGeneral'));
       return;
     }
-    if (!window.confirm('Are you sure? Products in this category will be moved to "General" category.')) return;
+    if (!window.confirm(t('categories.deleteConfirm'))) return;
     try {
       await categoriesAPI.delete(categoryId);
       await fetchCategories();
     } catch (err) {
-      alert(err.response?.data?.error || 'Failed to delete product category');
+      alert(err.response?.data?.error || t('categories.categoryDeleteFailed'));
     }
   };
 
@@ -71,7 +73,7 @@ const Categories = ({ readOnly = false }) => {
       setViewingItems({ category });
     } catch (err) {
       console.error('Error fetching items:', err);
-      alert('Failed to load items');
+      alert(t('categories.failedToLoad'));
     }
   };
 
@@ -99,14 +101,14 @@ const Categories = ({ readOnly = false }) => {
   }, [searchQuery]);
 
   if (loading) {
-    return <div className="content-container"><div className="loading">Loading categories...</div></div>;
+    return <div className="content-container"><div className="loading">{t('categories.loading')}</div></div>;
   }
 
   return (
     <div className="content-container">
       <div className="page-header">
-        <h1 className="page-title">Product Categories</h1>
-        <p className="page-subtitle">Optional: Organize products for reports (سامان کی قسم)</p>
+        <h1 className="page-title">{t('categories.title')}</h1>
+        <p className="page-subtitle">{t('categories.subtitle')}</p>
       </div>
 
       {error && <div className="error-message">{error}</div>}
@@ -114,11 +116,11 @@ const Categories = ({ readOnly = false }) => {
       {/* Search Section */}
       <div className="card" style={{ marginBottom: '20px' }}>
         <div style={{ padding: '16px', borderBottom: '1px solid #e2e8f0' }}>
-          <label className="form-label" style={{ marginBottom: '8px', display: 'block', fontSize: '13px' }}>Search Product Categories</label>
+          <label className="form-label" style={{ marginBottom: '8px', display: 'block', fontSize: '13px' }}>{t('categories.searchCategories')}</label>
           <input
             type="text"
             className="form-input"
-            placeholder="Search by product category name..."
+            placeholder={t('categories.searchPlaceholder')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             style={{ fontSize: '14px', width: '100%' }}
@@ -130,10 +132,10 @@ const Categories = ({ readOnly = false }) => {
       <div className="card">
         <div className="card-header">
           <div className="card-header-content">
-            <h2>Product Categories</h2>
+            <h2>{t('categories.title')}</h2>
             {!readOnly && (
               <button className="btn btn-primary" onClick={() => { setEditingCategory(null); setModalOpen(true); }}>
-                + Add Product Category
+                + {t('categories.addCategory')}
               </button>
             )}
           </div>
@@ -142,14 +144,14 @@ const Categories = ({ readOnly = false }) => {
           <table className="categories-table">
             <thead>
               <tr>
-                <th>Product Category Name</th>
-                <th>Status</th>
-                <th>Actions</th>
+                <th>{t('categories.categoryName')}</th>
+                <th>{t('categories.status')}</th>
+                <th>{t('categories.actions')}</th>
               </tr>
             </thead>
             <tbody>
               {paginatedCategories.length === 0 ? (
-                <tr><td colSpan="3" className="empty-state">{searchQuery ? `No product categories found matching "${searchQuery}".` : 'No product categories found'}</td></tr>
+                <tr><td colSpan="3" className="empty-state">{searchQuery ? t('categories.noCategoriesMatching', { query: searchQuery }) : t('categories.noCategories')}</td></tr>
               ) : (
                 paginatedCategories.map(cat => (
                   <tr key={cat.category_id}>
@@ -158,8 +160,8 @@ const Categories = ({ readOnly = false }) => {
                     <td className="actions-cell" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                       {!readOnly && (
                         <>
-                          <button className="btn-edit" onClick={() => { setEditingCategory(cat); setModalOpen(true); }}>Edit</button>
-                          <button className="btn-delete" onClick={() => handleDelete(cat.category_id)}>Delete</button>
+                          <button className="btn-edit" onClick={() => { setEditingCategory(cat); setModalOpen(true); }}>{t('categories.edit')}</button>
+                          <button className="btn-delete" onClick={() => handleDelete(cat.category_id)}>{t('categories.delete')}</button>
                         </>
                       )}
                     </td>
@@ -207,6 +209,7 @@ const Categories = ({ readOnly = false }) => {
 };
 
 const CategoryModal = ({ category, onSave, onClose }) => {
+  const { t } = useTranslation();
   const [formData, setFormData] = useState({
     category_name: category?.category_name || '',
     status: category?.status || 'active',
@@ -219,7 +222,7 @@ const CategoryModal = ({ category, onSave, onClose }) => {
     try {
       await onSave(formData);
     } catch (err) {
-      alert(err.response?.data?.error || 'Failed to save category');
+      alert(err.response?.data?.error || t('categories.categoryFailed'));
     } finally {
       setSaving(false);
     }
@@ -229,13 +232,13 @@ const CategoryModal = ({ category, onSave, onClose }) => {
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <h2>{category ? 'Edit Product Category' : 'Add Product Category'}</h2>
+          <h2>{category ? t('categories.editCategory') : t('categories.addCategory')}</h2>
           <button className="modal-close" onClick={onClose}>×</button>
         </div>
         <form onSubmit={handleSubmit} className="modal-content">
           <div className="form-group">
             <label className="form-label">
-              Product Category Name * <span style={{ fontSize: '11px', color: '#64748b' }}>سامان کی قسم</span>
+              {t('categories.categoryNameLabel')} <span style={{ fontSize: '11px', color: '#64748b' }}>سامان کی قسم</span>
             </label>
             <input 
               className="form-input" 
@@ -246,20 +249,20 @@ const CategoryModal = ({ category, onSave, onClose }) => {
             />
             {category && category.category_name.toLowerCase() === 'general' && (
               <small style={{ color: '#64748b', fontSize: '12px', marginTop: '4px', display: 'block' }}>
-                "General" Product Category cannot be renamed or deleted
+                {t('categories.generalCannotBeRenamed')}
               </small>
             )}
           </div>
           <div className="form-group">
-            <label className="form-label">Status</label>
+            <label className="form-label">{t('categories.status')}</label>
             <select className="form-input" value={formData.status} onChange={(e) => setFormData({...formData, status: e.target.value})}>
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
+              <option value="active">{t('categories.active')}</option>
+              <option value="inactive">{t('categories.inactive')}</option>
             </select>
           </div>
           <div className="modal-actions">
-            <button type="button" className="btn btn-secondary" onClick={onClose}>Cancel</button>
-            <button type="submit" className="btn btn-primary" disabled={saving}>{saving ? 'Saving...' : 'Save'}</button>
+            <button type="button" className="btn btn-secondary" onClick={onClose}>{t('categories.cancel')}</button>
+            <button type="submit" className="btn btn-primary" disabled={saving}>{saving ? t('categories.saving') : t('categories.save')}</button>
           </div>
         </form>
       </div>
@@ -268,31 +271,32 @@ const CategoryModal = ({ category, onSave, onClose }) => {
 };
 
 const ItemsListViewModal = ({ category, items, onClose }) => {
+  const { t } = useTranslation();
   const formatCurrency = (amount) => `PKR ${Number(amount || 0).toFixed(2)}`;
 
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '1000px', maxHeight: '90vh', overflow: 'auto' }}>
         <div className="modal-header">
-          <h2>Items: {category.category_name}</h2>
+          <h2>{t('categories.itemsInCategory', { categoryName: category.category_name })}</h2>
           <button className="modal-close" onClick={onClose}>×</button>
         </div>
         <div className="modal-content">
           {items.length === 0 ? (
             <div style={{ padding: '20px', textAlign: 'center', color: '#94a3b8' }}>
-              <p>No items found for this category.</p>
+              <p>{t('categories.noItemsInCategory')}</p>
             </div>
           ) : (
             <div className="table-container">
               <table className="categories-table">
                 <thead>
                   <tr>
-                    <th>Product Name</th>
-                    <th>Purchase Price</th>
-                    <th>Retail Price</th>
-                    <th>Wholesale Price</th>
-                    <th>Stock</th>
-                    <th>Unit</th>
+                    <th>{t('categories.productName')}</th>
+                    <th>{t('categories.purchasePrice')}</th>
+                    <th>{t('categories.retailPrice')}</th>
+                    <th>{t('categories.wholesalePrice')}</th>
+                    <th>{t('categories.stock')}</th>
+                    <th>{t('categories.unit')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -311,7 +315,7 @@ const ItemsListViewModal = ({ category, items, onClose }) => {
             </div>
           )}
           <div className="modal-actions" style={{ marginTop: '20px' }}>
-            <button className="btn btn-secondary" onClick={onClose}>Close</button>
+            <button className="btn btn-secondary" onClick={onClose}>{t('categories.close')}</button>
           </div>
         </div>
       </div>

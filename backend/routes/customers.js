@@ -295,8 +295,22 @@ router.post('/', async (req, res) => {
 
     const openingBal = parseFloat(opening_balance) || 0;
     const customerStatus = status || 'active';
-    const customerType = customer_type || 'cash';
+    // CRITICAL: customer_type must be one of: 'walk-in', 'retail', 'wholesale', 'special'
+    // Default to 'walk-in' if not provided or invalid
+    const validCustomerTypes = ['walk-in', 'retail', 'wholesale', 'special'];
+    const customerType = (customer_type && validCustomerTypes.includes(customer_type)) 
+      ? customer_type 
+      : 'walk-in';
     const creditLimit = credit_limit ? parseFloat(credit_limit) : null;
+
+    console.log('[Customers API] Creating customer:', {
+      name: name.trim(),
+      phone: phone.trim(),
+      openingBalance: openingBal,
+      customerType: customerType,
+      creditLimit: creditLimit,
+      status: customerStatus
+    });
 
     const result = await db.query(
       `INSERT INTO customers (name, phone, address, opening_balance, current_balance, customer_type, credit_limit, status)
@@ -305,10 +319,18 @@ router.post('/', async (req, res) => {
       [name.trim(), phone.trim(), address || null, openingBal, customerType, creditLimit, customerStatus]
     );
 
+    console.log('[Customers API] Customer created successfully:', result.rows[0]?.customer_id);
     res.status(201).json(result.rows[0]);
   } catch (error) {
-    console.error('Error creating customer:', error);
-    res.status(500).json({ error: 'Failed to create customer', message: error.message });
+    console.error('[Customers API] Error creating customer:', error);
+    console.error('[Customers API] Error details:', {
+      message: error.message,
+      code: error.code,
+      detail: error.detail,
+      constraint: error.constraint,
+      stack: error.stack
+    });
+    res.status(500).json({ error: 'Failed to create customer', message: error.message, detail: error.detail });
   }
 });
 
@@ -328,7 +350,12 @@ router.put('/:id', async (req, res) => {
 
     const openingBal = parseFloat(opening_balance) || 0;
     const customerStatus = status || 'active';
-    const customerType = customer_type || 'cash';
+    // CRITICAL: customer_type must be one of: 'walk-in', 'retail', 'wholesale', 'special'
+    // Default to 'walk-in' if not provided or invalid
+    const validCustomerTypes = ['walk-in', 'retail', 'wholesale', 'special'];
+    const customerType = (customer_type && validCustomerTypes.includes(customer_type)) 
+      ? customer_type 
+      : 'walk-in';
     const creditLimit = credit_limit ? parseFloat(credit_limit) : null;
 
     // Check if credit_limit column exists
