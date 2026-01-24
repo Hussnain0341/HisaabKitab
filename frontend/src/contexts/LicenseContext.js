@@ -252,12 +252,13 @@ export const LicenseProvider = ({ children }) => {
    * Check if feature is enabled (only for ACTIVATED licenses)
    */
   const isFeatureEnabled = useCallback((featureName) => {
-    if (licenseState !== LICENSE_STATES.ACTIVATED || !licenseInfo) {
-      return false;
+    // User requirement: once a license is ACTIVATED, nothing should be blocked by "feature gating".
+    // Treat all features as enabled for any activated license.
+    if (licenseState === LICENSE_STATES.ACTIVATED) {
+      return true;
     }
-    const features = licenseInfo.features || {};
-    return features[featureName] === true;
-  }, [licenseState, licenseInfo]);
+    return false;
+  }, [licenseState]);
 
   /**
    * Initial check on mount (NON-BLOCKING, FAIL-SAFE)
