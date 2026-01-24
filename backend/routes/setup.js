@@ -71,15 +71,42 @@ router.post('/migrate-license', async (req, res) => {
 });
 
 /**
- * Run license migration
+ * Run license migration (legacy endpoint - use /migrate-license instead)
  */
 router.post('/migrate', async (req, res) => {
   try {
-    // Read migration file
-    const migrationPath = path.join(__dirname, '../../database/migration_add_license_system.sql');
-    const migrationSQL = fs.readFileSync(migrationPath, 'utf8');
-
-    // Execute migration
+    // Check if the old migration file exists
+    const oldMigrationPath = path.join(__dirname, '../../database/migration_add_license_system.sql');
+    
+    if (!fs.existsSync(oldMigrationPath)) {
+      // File doesn't exist - license system is already set up
+      // Check if license_info table exists
+      const checkTableQuery = `
+        SELECT EXISTS (
+          SELECT FROM information_schema.tables 
+          WHERE table_schema = 'public' 
+          AND table_name = 'license_info'
+        );
+      `;
+      
+      const result = await db.query(checkTableQuery);
+      const tablesExist = result.rows[0].exists;
+      
+      if (tablesExist) {
+        return res.json({
+          success: true,
+          message: 'License tables already exist. System is ready!'
+        });
+      } else {
+        return res.status(404).json({
+          success: false,
+          error: 'Migration file not found. Please use /migrate-license endpoint instead.'
+        });
+      }
+    }
+    
+    // If file exists, read and execute it
+    const migrationSQL = fs.readFileSync(oldMigrationPath, 'utf8');
     await db.query(migrationSQL);
     
     res.json({

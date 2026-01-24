@@ -624,9 +624,10 @@ async function restoreBackup(backupFilename) {
     const originalPgPassword = process.env.PGPASSWORD;
     process.env.PGPASSWORD = dbConfig.password;
     
-    // Close all database connections before restore
-    // Note: This is critical - we need to ensure no active transactions
-    await db.pool.end();
+    // Note: We do NOT close the pool here because it's shared across the entire app.
+    // PostgreSQL can handle concurrent connections during restore.
+    // If there are active transactions, they may fail, but that's acceptable for a restore operation.
+    // The user should be aware that a restore operation will interrupt active operations.
     
     // Build psql restore command
     const psqlCmdPath = await getPsqlPath();
@@ -643,9 +644,6 @@ async function restoreBackup(backupFilename) {
     await logBackupOperation('backup_restore', 'success', {
       filename: backupFilename,
     });
-    
-    // Note: Database pool needs to be recreated after restore
-    // This will be handled by the app restart
     
     return {
       success: true,
