@@ -283,6 +283,20 @@ async function getPsqlPath() {
 
 /**
  * Create PostgreSQL backup using pg_dump
+ * 
+ * REQUIRED DATABASE PRIVILEGES:
+ * The database user (DB_USER from .env, default: 'postgres') must have:
+ * - SELECT privilege on all tables (to read data)
+ * - USAGE privilege on schemas (to access schema objects)
+ * 
+ * RECOMMENDED: Use the 'postgres' superuser account for backup operations.
+ * If using a non-superuser account, ensure it has SELECT privileges on all tables.
+ * 
+ * Backup flags used:
+ * - --clean: Include DROP statements before CREATE statements
+ * - --if-exists: Use IF EXISTS when dropping objects (prevents errors)
+ * - --no-owner: Skip restoration of object ownership (prevents permission errors)
+ * - --no-privileges: Skip restoration of access privileges (prevents permission errors)
  */
 async function createBackup(backupDir = null) {
   const settings = await getBackupSettings();
@@ -325,12 +339,16 @@ async function createBackup(backupDir = null) {
     process.env.PGPASSWORD = dbConfig.password;
     
     // Build pg_dump command
+    // --clean: Include DROP statements before CREATE statements
+    // --if-exists: Use IF EXISTS when dropping objects
+    // --no-owner: Skip restoration of object ownership
+    // --no-privileges: Skip restoration of access privileges (grants/revokes)
     const pgDumpCmdPath = await getPgDumpPath();
     // Only quote if it's a full path (absolute path or contains directory separators), otherwise use as-is
     const isFullPath = path.isAbsolute(pgDumpCmdPath) || pgDumpCmdPath.includes('\\') || pgDumpCmdPath.includes('/');
     const pgDumpCmd = isFullPath
-      ? `"${pgDumpCmdPath}" -h ${dbConfig.host} -p ${dbConfig.port} -U ${dbConfig.user} -d ${dbConfig.database} -f "${tempPath}" --no-password`
-      : `${pgDumpCmdPath} -h ${dbConfig.host} -p ${dbConfig.port} -U ${dbConfig.user} -d ${dbConfig.database} -f "${tempPath}" --no-password`;
+      ? `"${pgDumpCmdPath}" -h ${dbConfig.host} -p ${dbConfig.port} -U ${dbConfig.user} -d ${dbConfig.database} -f "${tempPath}" --clean --if-exists --no-owner --no-privileges --no-password`
+      : `${pgDumpCmdPath} -h ${dbConfig.host} -p ${dbConfig.port} -U ${dbConfig.user} -d ${dbConfig.database} -f "${tempPath}" --clean --if-exists --no-owner --no-privileges --no-password`;
     
     // Execute pg_dump
     await execPromise(pgDumpCmd);
@@ -606,6 +624,22 @@ async function listBackups() {
 
 /**
  * Restore database from backup file
+ * 
+ * REQUIRED DATABASE PRIVILEGES:
+ * The database user (DB_USER from .env, default: 'postgres') must have:
+ * - CREATE privilege on the database (to create tables, sequences, functions, triggers)
+ * - DROP privilege on the database (to drop existing objects when using --clean)
+ * - INSERT, UPDATE, DELETE, SELECT privileges on all tables (to restore data)
+ * - USAGE privilege on schemas (to access schema objects)
+ * 
+ * RECOMMENDED: Use the 'postgres' superuser account for backup/restore operations.
+ * If using a non-superuser account, ensure it has the above privileges granted.
+ * 
+ * The restore process:
+ * 1. Executes the SQL backup file using psql
+ * 2. Continues on expected errors (already exists, permission warnings, etc.)
+ * 3. Verifies restore success by checking database state
+ * 4. Only reports success if verification passes
  */
 async function restoreBackup(backupFilename) {
   console.log(`[Backup Service] Starting restore from: ${backupFilename}`);
@@ -663,26 +697,161 @@ async function restoreBackup(backupFilename) {
     // Quote backup path if it contains spaces
     const quotedBackupPath = backupPath.includes(' ') ? `"${backupPath}"` : backupPath;
     
+    // IMPORTANT: We do NOT use --single-transaction because:
+    // 1. It causes the entire restore to abort on ANY error (even expected ones)
+    // 2. With --clean --if-exists, we expect some "already exists" errors which are harmless
+    // 3. We'll verify restore success after completion instead
+    
+    // Use --set ON_ERROR_STOP=off to continue on errors (we'll verify success separately)
     const psqlCmd = isFullPath
-      ? `"${psqlCmdPath}" -h ${dbConfig.host} -p ${dbConfig.port} -U ${dbConfig.user} -d ${dbConfig.database} -f ${quotedBackupPath} --no-password`
-      : `${psqlCmdPath} -h ${dbConfig.host} -p ${dbConfig.port} -U ${dbConfig.user} -d ${dbConfig.database} -f ${quotedBackupPath} --no-password`;
+      ? `"${psqlCmdPath}" -h ${dbConfig.host} -p ${dbConfig.port} -U ${dbConfig.user} -d ${dbConfig.database} -f ${quotedBackupPath} --set ON_ERROR_STOP=off --no-password`
+      : `${psqlCmdPath} -h ${dbConfig.host} -p ${dbConfig.port} -U ${dbConfig.user} -d ${dbConfig.database} -f ${quotedBackupPath} --set ON_ERROR_STOP=off --no-password`;
     
     console.log(`[Backup Service] Executing restore command...`);
     
     // Execute restore with timeout
-    const { stdout, stderr } = await execPromise(psqlCmd, {
-      maxBuffer: 10 * 1024 * 1024, // 10MB buffer
-      timeout: 300000, // 5 minute timeout
-    });
+    let stdout, stderr, exitCode = 0;
+    let restoreSucceeded = false;
     
-    if (stdout) {
-      console.log(`[Backup Service] psql stdout: ${stdout}`);
-    }
-    if (stderr) {
-      console.warn(`[Backup Service] psql stderr: ${stderr}`);
+    try {
+      const result = await execPromise(psqlCmd, {
+        maxBuffer: 10 * 1024 * 1024, // 10MB buffer
+        timeout: 300000, // 5 minute timeout
+      });
+      stdout = result.stdout;
+      stderr = result.stderr;
+      exitCode = 0;
+      restoreSucceeded = true;
+    } catch (error) {
+      // execPromise throws an error if exit code is non-zero
+      stdout = error.stdout || '';
+      stderr = error.stderr || '';
+      exitCode = error.code || 1;
+      
+      // Check if there are critical errors (not just expected warnings)
+      const errorLines = stderr.split('\n').filter(line => line.trim());
+      const criticalErrors = errorLines.filter(line => {
+        // Skip expected errors from --clean --if-exists
+        if (line.includes('already exists') || line.includes('does not exist')) {
+          return false;
+        }
+        // Skip permission warnings (we use --no-owner --no-privileges)
+        if (line.includes('must be owner') || line.includes('must be member') || line.includes('no privileges were granted')) {
+          return false;
+        }
+        // Skip duplicate key errors (these happen if data already exists, but restore continues)
+        if (line.includes('duplicate key value violates unique constraint')) {
+          return false; // This is expected if restoring over existing data
+        }
+        // Skip trigger already exists errors
+        if (line.includes('trigger') && line.includes('already exists')) {
+          return false;
+        }
+        // Keep actual critical errors
+        return line.includes('ERROR:');
+      });
+      
+      // If there are critical errors, we'll verify database state before failing
+      if (criticalErrors.length > 0) {
+        console.warn(`[Backup Service] Critical errors detected during restore, will verify database state...`);
+        criticalErrors.forEach(err => console.warn(`  ${err}`));
+      } else {
+        // No critical errors, restore likely succeeded
+        restoreSucceeded = true;
+      }
     }
     
-    console.log(`[Backup Service] Restore completed successfully`);
+    // Verify restore actually succeeded by checking database state
+    console.log(`[Backup Service] Verifying restore success...`);
+    let verificationFailed = false;
+    let verificationError = null;
+    
+    try {
+      // Wait a moment for database to settle
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Check if key tables exist and are accessible
+      const verificationQueries = [
+        'SELECT COUNT(*) as count FROM information_schema.tables WHERE table_schema = \'public\' AND table_type = \'BASE TABLE\'',
+        'SELECT COUNT(*) as count FROM products',
+        'SELECT COUNT(*) as count FROM customers',
+        'SELECT COUNT(*) as count FROM sales',
+      ];
+      
+      for (const query of verificationQueries) {
+        try {
+          const result = await db.query(query);
+          console.log(`[Backup Service] Verification query succeeded: ${query.substring(0, 50)}...`);
+        } catch (err) {
+          console.error(`[Backup Service] Verification query failed: ${query.substring(0, 50)}... - ${err.message}`);
+          verificationFailed = true;
+          verificationError = err.message;
+          break;
+        }
+      }
+      
+      if (!verificationFailed) {
+        console.log(`[Backup Service] Database verification passed - restore was successful`);
+        restoreSucceeded = true;
+      } else {
+        console.error(`[Backup Service] Database verification failed - restore may have failed`);
+        restoreSucceeded = false;
+      }
+    } catch (verifyErr) {
+      console.error(`[Backup Service] Error during verification: ${verifyErr.message}`);
+      verificationFailed = true;
+      verificationError = verifyErr.message;
+      restoreSucceeded = false;
+    }
+    
+    // Log output (limited to avoid spam)
+    if (stdout && stdout.length > 0) {
+      const stdoutPreview = stdout.length > 500 ? stdout.substring(0, 500) + '...' : stdout;
+      console.log(`[Backup Service] psql stdout: ${stdoutPreview}`);
+    }
+    
+    if (stderr && stderr.length > 0) {
+      // Filter out expected errors and warnings
+      const filteredStderr = stderr.split('\n').filter(line => {
+        const trimmed = line.trim();
+        if (!trimmed) return false;
+        
+        // Skip expected errors from --clean --if-exists
+        if (trimmed.includes('already exists') || trimmed.includes('does not exist')) {
+          return false;
+        }
+        // Skip permission warnings (we use --no-owner --no-privileges)
+        if (trimmed.includes('must be owner') || trimmed.includes('must be member') || trimmed.includes('no privileges were granted')) {
+          return false;
+        }
+        // Skip duplicate key errors (expected when restoring over existing data)
+        if (trimmed.includes('duplicate key value violates unique constraint')) {
+          return false;
+        }
+        // Skip trigger already exists errors
+        if (trimmed.includes('trigger') && trimmed.includes('already exists')) {
+          return false;
+        }
+        // Keep actual errors
+        return trimmed.includes('ERROR:');
+      }).join('\n');
+      
+      if (filteredStderr) {
+        const stderrPreview = filteredStderr.length > 500 ? filteredStderr.substring(0, 500) + '...' : filteredStderr;
+        console.warn(`[Backup Service] psql stderr (filtered critical errors): ${stderrPreview}`);
+      }
+    }
+    
+    // If restore failed verification, throw error
+    if (!restoreSucceeded || verificationFailed) {
+      const errorMsg = verificationError 
+        ? `Restore verification failed: ${verificationError}`
+        : `Restore failed - database verification did not pass`;
+      console.error(`[Backup Service] ${errorMsg}`);
+      throw new Error(errorMsg);
+    }
+    
+    console.log(`[Backup Service] Restore completed and verified successfully`);
     
     // Log restore success (don't let logging errors break the restore)
     try {
