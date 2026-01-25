@@ -1,6 +1,11 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../db');
+const { requireAuth, requireRole } = require('../middleware/authMiddleware');
+
+// Suppliers management is admin-only (cashiers cannot manage suppliers)
+router.use(requireAuth);
+router.use(requireRole('administrator'));
 
 // Get all suppliers (sorted by highest payable balance first by default)
 router.get('/', async (req, res) => {

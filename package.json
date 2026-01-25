@@ -11,7 +11,9 @@
     "dev:electron": "wait-on http://localhost:3000 && cross-env NODE_ENV=development electron .",
     "build": "npm run build:react && npm run build:electron",
     "build:react": "cd frontend && npm run build",
-    "build:electron": "electron-builder",
+    "build:electron": "cross-env CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder",
+    "sign:installer": "node scripts/sign.js",
+    "build:signed": "npm run build:electron && npm run sign:installer",
     "install:all": "npm install && cd frontend && npm install && cd ../backend && npm install",
     "setup:db": "node database/setup.js"
   },
@@ -48,11 +50,30 @@
       "backend/**/*",
       "frontend/build/**/*",
       "database/**/*",
-      "assets/**/*"
+      "assets/**/*",
+      "!**/node_modules/**/*",
+      "!**/*.{md,txt,log}"
+    ],
+    "asar": true,
+    "asarUnpack": [
+      "backend/node_modules/**/*",
+      "database/**/*"
     ],
     "win": {
-      "target": "nsis",
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        }
+      ],
       "icon": "assets/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "HisaabKitab"
     }
   }
 }

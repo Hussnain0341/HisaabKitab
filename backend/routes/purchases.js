@@ -1,6 +1,11 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../db');
+const { requireAuth, requireRole } = require('../middleware/authMiddleware');
+
+// Purchases management is admin-only (cashiers cannot manage purchases)
+router.use(requireAuth);
+router.use(requireRole('administrator'));
 
 // Get all purchases with supplier and item details
 router.get('/', async (req, res) => {

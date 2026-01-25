@@ -2,6 +2,7 @@ import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useLicense } from '../contexts/LicenseContext';
+import { useAuth } from '../contexts/AuthContext';
 import './Sidebar.css';
 
 const Sidebar = () => {
@@ -9,27 +10,35 @@ const Sidebar = () => {
   const location = useLocation();
   const { t } = useTranslation();
   const { isFeatureEnabled } = useLicense();
+  const { user, isAdmin } = useAuth();
 
   const menuItems = [
     { id: 'dashboard', labelKey: 'menu.dashboard', path: '/', icon: '🏠' },
     { id: 'billing', labelKey: 'menu.billing', path: '/billing', icon: '🧾' },
+    { id: 'sales', labelKey: 'menu.sales', path: '/sales', icon: '💰' },
     { id: 'products', labelKey: 'menu.products', path: '/inventory', icon: '📦' },
     { id: 'customers', labelKey: 'menu.customers', path: '/customers', icon: '👤' },
-    { id: 'suppliers', labelKey: 'menu.suppliers', path: '/suppliers', icon: '👥' },
-    { id: 'purchases', labelKey: 'menu.purchases', path: '/purchases', icon: '🛒' },
-    { id: 'expenses', labelKey: 'menu.expenses', path: '/expenses', icon: '💰' },
+    { id: 'suppliers', labelKey: 'menu.suppliers', path: '/suppliers', icon: '👥', adminOnly: true },
+    { id: 'purchases', labelKey: 'menu.purchases', path: '/purchases', icon: '🛒', adminOnly: true },
+    { id: 'expenses', labelKey: 'menu.expenses', path: '/expenses', icon: '💰', adminOnly: true },
     { id: 'rate-list', labelKey: 'menu.rateList', path: '/rate-list', icon: '📋' },
-    { id: 'reports', labelKey: 'menu.reports', path: '/reports', icon: '📈', feature: 'reports' },
+    { id: 'reports', labelKey: 'menu.reports', path: '/reports', icon: '📈', feature: 'reports', adminOnly: true },
+    { id: 'users', labelKey: 'menu.users', path: '/users', icon: '👤', adminOnly: true },
     { id: 'settings', labelKey: 'menu.settings', path: '/settings', icon: '⚙️' },
-    { id: 'categories', labelKey: 'menu.categories', path: '/categories', icon: '🏷️' },
+    { id: 'categories', labelKey: 'menu.categories', path: '/categories', icon: '🏷️', adminOnly: true },
   ];
 
-  // Filter menu items based on license features
+  // Filter menu items based on license features and user role
   const visibleMenuItems = menuItems.filter(item => {
-    if (item.feature) {
-      return isFeatureEnabled(item.feature);
+    // Check license feature
+    if (item.feature && !isFeatureEnabled(item.feature)) {
+      return false;
     }
-    return true; // Show items without feature requirement
+    // Check admin-only restriction
+    if (item.adminOnly && !isAdmin()) {
+      return false;
+    }
+    return true;
   });
 
   const isActive = (path) => {

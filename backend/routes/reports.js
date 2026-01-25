@@ -1,6 +1,14 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../db');
+const { requireAuth, requireRole } = require('../middleware/authMiddleware');
+const { logSensitiveAccess } = require('../utils/auditLogger');
+
+// All report routes require authentication
+router.use(requireAuth);
+// Dashboard route is accessible to both admins and cashiers (but cashiers see limited data)
+// Other report routes still require admin role
+
 // Removed checkFeature - allow all API calls, frontend handles operation blocking
 
 // Helper function to get date range for periods
@@ -74,9 +82,17 @@ function getDateRange(period) {
   return { startDate, endDate };
 }
 
-// Get comprehensive report with sales, purchases, and cash
-router.get('/comprehensive', async (req, res) => {
+// Get comprehensive report with sales, purchases, and cash - Admin only
+router.get('/comprehensive', requireRole('administrator'), async (req, res) => {
   try {
+    // Log sensitive access
+    await logSensitiveAccess(
+      req.user.user_id,
+      'reports',
+      req.ip || req.connection.remoteAddress,
+      req.get('user-agent')
+    );
+
     const { period = 'monthly', productId, supplierId } = req.query;
     const { startDate, endDate } = getDateRange(period);
 
@@ -213,7 +229,8 @@ router.get('/products', async (req, res) => {
 });
 
 // Get all suppliers for filter dropdown
-router.get('/suppliers', async (req, res) => {
+// Suppliers Report - Admin only
+router.get('/suppliers', requireRole('administrator'), async (req, res) => {
   try {
     const result = await db.query(
       'SELECT supplier_id, name FROM suppliers ORDER BY name ASC'
@@ -226,7 +243,8 @@ router.get('/suppliers', async (req, res) => {
 });
 
 // Stock Report - All products with stock levels
-router.get('/stock', async (req, res) => {
+// Stock Report - Admin only
+router.get('/stock', requireRole('administrator'), async (req, res) => {
   try {
     const result = await db.query(`
       SELECT 
@@ -250,7 +268,8 @@ router.get('/stock', async (req, res) => {
 });
 
 // Customer Outstanding Report
-router.get('/customers-outstanding', async (req, res) => {
+// Customers Outstanding - Admin only
+router.get('/customers-outstanding', requireRole('administrator'), async (req, res) => {
   try {
     const result = await db.query(`
       SELECT 
@@ -271,7 +290,8 @@ router.get('/customers-outstanding', async (req, res) => {
 });
 
 // Supplier Payable Report
-router.get('/suppliers-payable', async (req, res) => {
+// Suppliers Payable - Admin only
+router.get('/suppliers-payable', requireRole('administrator'), async (req, res) => {
   try {
     const { balance_only } = req.query;
     
@@ -349,7 +369,8 @@ router.get('/suppliers-payable', async (req, res) => {
 });
 
 // Get Customer Due List Report
-router.get('/customers-due', async (req, res) => {
+// Customers Due - Admin only
+router.get('/customers-due', requireRole('administrator'), async (req, res) => {
   try {
     const { balance_greater_than_zero } = req.query;
     
@@ -401,7 +422,8 @@ router.get('/customers-due', async (req, res) => {
 });
 
 // Dashboard Summary - Get all key metrics for selected period
-router.get('/dashboard-summary', async (req, res) => {
+// Dashboard Summary - Admin only
+router.get('/dashboard-summary', requireRole('administrator'), async (req, res) => {
   try {
     const { period = 'monthly', start_date, end_date } = req.query;
     
@@ -500,7 +522,8 @@ router.get('/dashboard-summary', async (req, res) => {
 });
 
 // Sales Summary Report
-router.get('/sales-summary', async (req, res) => {
+// Sales Summary - Admin only
+router.get('/sales-summary', requireRole('administrator'), async (req, res) => {
   try {
     const { period = 'monthly', start_date, end_date, product_id, customer_id } = req.query;
     
@@ -568,7 +591,8 @@ router.get('/sales-summary', async (req, res) => {
 });
 
 // Sales by Product Report
-router.get('/sales-by-product', async (req, res) => {
+// Sales by Product - Admin only
+router.get('/sales-by-product', requireRole('administrator'), async (req, res) => {
   try {
     const { period = 'monthly', start_date, end_date, product_id } = req.query;
     
@@ -635,7 +659,8 @@ router.get('/sales-by-product', async (req, res) => {
 });
 
 // Profit Report (Simple - Sales - Purchases - Expenses)
-router.get('/profit', async (req, res) => {
+// Profit Report - Admin only
+router.get('/profit', requireRole('administrator'), async (req, res) => {
   try {
     const { period = 'monthly', start_date, end_date } = req.query;
     
@@ -711,7 +736,8 @@ router.get('/profit', async (req, res) => {
 });
 
 // Expense Reports
-router.get('/expenses-summary', async (req, res) => {
+// Expenses Summary - Admin only
+router.get('/expenses-summary', requireRole('administrator'), async (req, res) => {
   try {
     const { period = 'monthly', start_date, end_date, category } = req.query;
     
@@ -786,7 +812,8 @@ router.get('/expenses-summary', async (req, res) => {
   }
 });
 
-router.get('/expenses-list', async (req, res) => {
+// Expenses List - Admin only
+router.get('/expenses-list', requireRole('administrator'), async (req, res) => {
   try {
     const { period = 'monthly', start_date, end_date, category } = req.query;
     
@@ -848,7 +875,8 @@ router.get('/expenses-list', async (req, res) => {
 });
 
 // Stock Reports
-router.get('/stock-current', async (req, res) => {
+// Stock Current - Admin only
+router.get('/stock-current', requireRole('administrator'), async (req, res) => {
   try {
     const result = await db.query(`
       SELECT 
@@ -875,7 +903,8 @@ router.get('/stock-current', async (req, res) => {
   }
 });
 
-router.get('/stock-low', async (req, res) => {
+// Stock Low - Admin only
+router.get('/stock-low', requireRole('administrator'), async (req, res) => {
   try {
     const { min_quantity = 5 } = req.query;
     
@@ -905,7 +934,8 @@ router.get('/stock-low', async (req, res) => {
 });
 
 // Customer Statement/History
-router.get('/customer-statement/:id', async (req, res) => {
+// Customer Statement - Admin only
+router.get('/customer-statement/:id', requireRole('administrator'), async (req, res) => {
   try {
     const { id } = req.params;
     const { start_date, end_date } = req.query;
@@ -1034,7 +1064,8 @@ router.get('/customer-statement/:id', async (req, res) => {
 });
 
 // Supplier History
-router.get('/supplier-history/:id', async (req, res) => {
+// Supplier History - Admin only
+router.get('/supplier-history/:id', requireRole('administrator'), async (req, res) => {
   try {
     const { id } = req.params;
     const { start_date, end_date } = req.query;
@@ -1195,8 +1226,10 @@ router.get('/supplier-history/:id', async (req, res) => {
 });
 
 // Dashboard Data - Today's Status Only
+// Accessible to both administrators and cashiers (cashiers see limited data)
 router.get('/dashboard', async (req, res) => {
   try {
+    const isAdmin = req.user.role === 'administrator';
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const todayEnd = new Date(today);
@@ -1212,14 +1245,15 @@ router.get('/dashboard', async (req, res) => {
     `;
 
     // 2. Today Profit - (Selling Price - Purchase Cost) × Quantity for today's bills
-    const todayProfitQuery = `
+    // Only calculate for administrators (cashiers don't see profit)
+    const todayProfitQuery = isAdmin ? `
       SELECT 
         COALESCE(SUM((si.selling_price - COALESCE(p.purchase_price, 0)) * si.quantity), 0) as today_profit
       FROM sale_items si
       JOIN sales s ON si.sale_id = s.sale_id
       LEFT JOIN products p ON si.product_id = p.product_id
       WHERE s.date >= $1 AND s.date <= $2
-    `;
+    ` : null;
 
     // 3. Cash in Hand - Opening cash + Today cash sales + Customer payments (cash) - Supplier payments (cash)
     // First, get opening cash from settings (if exists)
@@ -1337,7 +1371,20 @@ router.get('/dashboard', async (req, res) => {
       LIMIT 5
     `;
 
-    // Execute all queries in parallel
+    // Execute all queries in parallel (conditionally include profit query for admins)
+    const queries = [
+      db.query(todaySalesQuery, [today, todayEnd]),
+      isAdmin ? db.query(todayProfitQuery, [today, todayEnd]) : Promise.resolve({ rows: [{ today_profit: 0 }] }),
+      db.query(todayCashSalesQuery, [today, todayEnd]),
+      db.query(customerPaymentsQuery, [today, todayEnd]),
+      isAdmin ? db.query(supplierPaymentsQuery, [today, todayEnd]) : Promise.resolve({ rows: [{ cash_paid: 0 }] }),
+      db.query(customerDueQuery),
+      isAdmin ? db.query(supplierDueQuery) : Promise.resolve({ rows: [{ supplier_due: 0, supplier_count: 0 }] }),
+      db.query(lowStockQuery),
+      db.query(topSellingQuery, [today, todayEnd]),
+      db.query(recentBillsQuery, [today, todayEnd])
+    ];
+
     const [
       todaySalesResult,
       todayProfitResult,
@@ -1349,31 +1396,23 @@ router.get('/dashboard', async (req, res) => {
       lowStockResult,
       topSellingResult,
       recentBillsResult
-    ] = await Promise.all([
-      db.query(todaySalesQuery, [today, todayEnd]),
-      db.query(todayProfitQuery, [today, todayEnd]),
-      db.query(todayCashSalesQuery, [today, todayEnd]),
-      db.query(customerPaymentsQuery, [today, todayEnd]),
-      db.query(supplierPaymentsQuery, [today, todayEnd]),
-      db.query(customerDueQuery),
-      db.query(supplierDueQuery),
-      db.query(lowStockQuery),
-      db.query(topSellingQuery, [today, todayEnd]),
-      db.query(recentBillsQuery, [today, todayEnd])
-    ]);
+    ] = await Promise.all(queries);
 
-    // Calculate cash in hand
-    const todayCashSales = parseFloat(todayCashSalesResult.rows[0].cash_sales) || 0;
-    const customerPayments = parseFloat(customerPaymentsResult.rows[0].cash_received) || 0;
-    const supplierPayments = parseFloat(supplierPaymentsResult.rows[0].cash_paid) || 0;
-    const cashInHand = openingCash + todayCashSales + customerPayments - supplierPayments;
+    // Calculate cash in hand (only for admins - cashiers don't see this)
+    let cashInHand = 0;
+    if (isAdmin) {
+      const todayCashSales = parseFloat(todayCashSalesResult.rows[0].cash_sales) || 0;
+      const customerPayments = parseFloat(customerPaymentsResult.rows[0].cash_received) || 0;
+      const supplierPayments = parseFloat(supplierPaymentsResult.rows[0].cash_paid) || 0;
+      cashInHand = openingCash + todayCashSales + customerPayments - supplierPayments;
+    }
 
     res.json({
       todaySale: parseFloat(todaySalesResult.rows[0].today_sale) || 0,
-      todayProfit: parseFloat(todayProfitResult.rows[0].today_profit) || 0,
-      cashInHand: cashInHand,
+      todayProfit: isAdmin ? (parseFloat(todayProfitResult.rows[0].today_profit) || 0) : null,
+      cashInHand: isAdmin ? cashInHand : null,
       customerDue: parseFloat(customerDueResult.rows[0].customer_due) || 0,
-      supplierDue: parseFloat(supplierDueResult.rows[0].supplier_due) || 0,
+      supplierDue: isAdmin ? (parseFloat(supplierDueResult.rows[0].supplier_due) || 0) : null,
       lowStockCount: parseInt(lowStockResult.rows[0].low_stock_count) || 0,
       topSellingItems: topSellingResult.rows.map(row => ({
         product_id: row.product_id,

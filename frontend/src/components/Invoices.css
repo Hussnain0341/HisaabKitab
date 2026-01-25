@@ -58,12 +58,15 @@
 }
 
 .btn-view {
-  background: #3b82f6;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
   color: white;
+  box-shadow: 0 2px 4px rgba(16, 185, 129, 0.2);
 }
 
 .btn-view:hover {
-  background: #2563eb;
+  background: linear-gradient(135deg, #059669 0%, #047857 100%);
+  box-shadow: 0 4px 8px rgba(16, 185, 129, 0.3);
+  transform: translateY(-1px);
 }
 
 .btn-print {

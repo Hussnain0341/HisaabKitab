@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { settingsAPI, backupAPI } from '../services/api';
+import { settingsAPI, backupAPI, usersAPI, authAPI } from '../services/api';
 import { useLicense } from '../contexts/LicenseContext';
+import { useAuth } from '../contexts/AuthContext';
 import LicenseActivation from './LicenseActivation';
 import RestoreModal from './RestoreModal';
 import './Settings.css';
@@ -9,6 +10,7 @@ import './Settings.css';
 const Settings = ({ readOnly = false }) => {
   const { i18n, t } = useTranslation();
   const { licenseState, licenseInfo, isActivated, activateLicense, checkLicenseStatus, revalidateLicense, STATES } = useLicense();
+  const { user, isAdmin } = useAuth();
   const [settings, setSettings] = useState(null);
   const [printers, setPrinters] = useState([]);
   const [selectedPrinter, setSelectedPrinter] = useState('');
@@ -34,6 +36,19 @@ const Settings = ({ readOnly = false }) => {
   const [restoring, setRestoring] = useState(false);
   const [backupSettingsSaving, setBackupSettingsSaving] = useState(false);
   const [showRestoreModal, setShowRestoreModal] = useState(false);
+  
+  // Security section state
+  const [users, setUsers] = useState([]);
+  const [auditLogs, setAuditLogs] = useState([]);
+  const [showUsers, setShowUsers] = useState(false);
+  const [showAuditLogs, setShowAuditLogs] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmNewPassword, setConfirmNewPassword] = useState('');
+  const [changingPassword, setChangingPassword] = useState(false);
+  
+  // Tab state
+  const [activeTab, setActiveTab] = useState('license');
 
   useEffect(() => {
     fetchSettings();
@@ -506,418 +521,629 @@ const Settings = ({ readOnly = false }) => {
         </div>
       )}
 
-      {/* License Activation Section */}
-      <div className="card">
-        <div className="card-header">
-          <h2>🔒 {t('settings.licenseActivation')}</h2>
-        </div>
-        <div className="settings-form">
-          {isActivated ? (
-            <div className="license-status-activated">
-              <div className="license-status-icon">✅</div>
-              <div className="license-status-content">
-                <h3>{t('settings.softwareActivated')}</h3>
-                <p>{t('settings.licenseActive')}</p>
-                {licenseInfo && (
-                  <div className="license-info">
-                    {licenseInfo.tenantId && (
-                      <p><strong>{t('settings.tenant')}:</strong> {licenseInfo.tenantId}</p>
-                    )}
-                    {licenseInfo.licenseId && (
-                      <p><strong>{t('settings.licenseId')}:</strong> {licenseInfo.licenseId}</p>
-                    )}
-                  </div>
-                )}
-                <div style={{ marginTop: '15px' }}>
-                  <button
-                    type="button"
-                    onClick={handleRevalidateLicense}
-                    disabled={revalidating}
-                    className="btn btn-secondary"
-                    style={{ fontSize: '14px', padding: '8px 16px' }}
-                  >
-                    {revalidating ? t('settings.checking') : t('settings.checkLicenseStatus')}
-                  </button>
-                  <p style={{ fontSize: '12px', color: '#666', marginTop: '8px' }}>
-                    {t('settings.checkLicenseDesc')}
-                  </p>
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div className="license-activation-section">
-              <div className="license-status-unactivated">
-                <div className="license-status-icon">⚠️</div>
-                <div className="license-status-content">
-                  <h3>{t('settings.softwareNotActivated')}</h3>
-                  <p>{t('settings.pleaseActivate')}</p>
-                </div>
-              </div>
-              <div className="license-activation-form-wrapper">
-                <LicenseActivation 
-                  onActivationSuccess={async () => {
-                    await checkLicenseStatus();
-                  }}
-                  embedded={true}
-                />
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Shop Settings */}
-      <div className="card">
-        <div className="card-header">
-          <h2>{t('settings.shopInformation')}</h2>
-        </div>
-        <div className="settings-form">
-          <div className="form-group">
-            <label className="form-label">{t('settings.shopName')}</label>
-            <input
-              type="text"
-              className="form-input"
-              value={shopName}
-              onChange={(e) => setShopName(e.target.value)}
-              placeholder={t('settings.enterShopName')}
-            />
-          </div>
-
-          <div className="form-group">
-            <label className="form-label">{t('settings.shopAddress')}</label>
-            <textarea
-              className="form-input"
-              rows="3"
-              value={shopAddress}
-              onChange={(e) => setShopAddress(e.target.value)}
-              placeholder={t('settings.enterShopAddress')}
-            />
-          </div>
-
-          <div className="form-group">
-            <label className="form-label">{t('settings.shopPhone')}</label>
-            <input
-              type="text"
-              className="form-input"
-              value={shopPhone}
-              onChange={(e) => setShopPhone(e.target.value)}
-              placeholder={t('settings.enterShopPhone')}
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Language & Theme */}
-      <div className="card">
-        <div className="card-header">
-          <h2>{t('settings.languageAppearance')}</h2>
-        </div>
-        <div className="settings-form">
-          <div className="form-group">
-            <label className="form-label">{t('settings.language')}</label>
-            <select
-              className="form-input"
-              value={language}
-              onChange={(e) => setLanguage(e.target.value)}
-              disabled={readOnly}
-            >
-              <option value="en">English</option>
-              <option value="ur">Urdu (اردو)</option>
-            </select>
-            <small className="form-help">
-              {t('settings.selectLanguage')}
-            </small>
-          </div>
-
-          <div className="form-group">
-            <label className="form-label">{t('settings.theme')}</label>
-            <select
-              className="form-input"
-              value={theme}
-              onChange={(e) => setTheme(e.target.value)}
-              disabled={readOnly}
-            >
-              <option value="light">Light Mode</option>
-            </select>
-            <small className="form-help">
-              {t('settings.appTheme')}
-            </small>
-          </div>
-        </div>
-      </div>
-
-      {/* Printer Configuration */}
-      {!readOnly && (
-        <div className="card">
-          <div className="card-header">
-            <h2>{t('settings.printerConfiguration')}</h2>
-          </div>
-        <div className="settings-form">
-          <div className="form-group">
-            <label className="form-label">{t('settings.selectPrinter')}</label>
-            <select
-              className="form-input"
-              value={selectedPrinter}
-              onChange={(e) => setSelectedPrinter(e.target.value)}
-            >
-              <option value="">-- {t('settings.selectPrinter')} --</option>
-              {printers.map((printer, index) => (
-                <option key={index} value={printer.name}>
-                  {printer.name} {printer.description ? `- ${printer.description}` : ''}
-                </option>
-              ))}
-            </select>
-            <small className="form-help">
-              {t('settings.selectThermalPrinter')}
-            </small>
-          </div>
-
-          <div className="form-actions">
+      {/* Tabs Navigation */}
+      <div className="settings-tabs">
+        <button
+          className={`settings-tab ${activeTab === 'license' ? 'active' : ''}`}
+          onClick={() => setActiveTab('license')}
+        >
+          🔒 {t('settings.licenseActivation')}
+        </button>
+        <button
+          className={`settings-tab ${activeTab === 'shop' ? 'active' : ''}`}
+          onClick={() => setActiveTab('shop')}
+        >
+          🏪 {t('settings.shopInformation')}
+        </button>
+        <button
+          className={`settings-tab ${activeTab === 'language' ? 'active' : ''}`}
+          onClick={() => setActiveTab('language')}
+        >
+          🌐 {t('settings.languageAppearance')}
+        </button>
+        {!readOnly && (
+          <>
             <button
-              className="btn btn-secondary"
-              onClick={handleTestPrint}
-              disabled={!selectedPrinter}
+              className={`settings-tab ${activeTab === 'printer' ? 'active' : ''}`}
+              onClick={() => setActiveTab('printer')}
             >
-              {t('settings.testPrint')}
+              🖨️ {t('settings.printerConfiguration')}
             </button>
-          </div>
-        </div>
-        </div>
-      )}
-
-      {/* Data Safety & Backup */}
-      {!readOnly && (
-        <div className="card">
-          <div className="card-header">
-            <h2>💾 {t('backup.title')}</h2>
-          </div>
-          <div className="settings-form">
-            {/* Enable Auto Backup */}
-            <div className="form-group">
-              <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <input
-                  type="checkbox"
-                  checked={backupSettings.enabled}
-                  onChange={(e) => handleBackupSettingsChange({ enabled: e.target.checked })}
-                  style={{ width: '18px', height: '18px' }}
-                />
-                {t('backup.enableAutoBackup')}
-              </label>
-              <small className="form-help">
-                {t('backup.enableAutoBackupDesc')}
-              </small>
-            </div>
-
-            {backupSettings.enabled && (
-              <>
-                {/* Backup Mode */}
-                <div className="form-group">
-                  <label className="form-label">{t('backup.backupMode')}</label>
-                  <select
-                    className="form-input"
-                    value={backupSettings.mode || 'scheduled'}
-                    onChange={(e) => {
-                      console.log('[Settings] Backup mode changed to:', e.target.value);
-                      handleBackupSettingsChange({ mode: e.target.value });
-                    }}
-                    disabled={backupSettingsSaving}
-                  >
-                    <option value="app_start">{t('backup.modeAppStart')}</option>
-                    <option value="scheduled">{t('backup.modeScheduled')}</option>
-                  </select>
-                  <small className="form-help">
-                    {t('backup.backupModeDesc')}
-                    {backupSettingsSaving && <span style={{ color: '#059669', marginLeft: '8px' }}>💾 Saving...</span>}
-                  </small>
-                </div>
-
-                {/* Scheduled Time (only if mode is scheduled) */}
-                {backupSettings.mode === 'scheduled' && (
-                  <div className="form-group">
-                    <label className="form-label">{t('backup.scheduledTime')}</label>
-                    <input
-                      type="time"
-                      className="form-input"
-                      value={backupSettings.scheduledTime || '02:00'}
-                      onChange={(e) => {
-                        console.log('[Settings] Scheduled time changed to:', e.target.value);
-                        handleBackupSettingsChange({ scheduledTime: e.target.value });
-                      }}
-                      disabled={backupSettingsSaving}
-                      style={{ maxWidth: '200px' }}
-                    />
-                    <small className="form-help">
-                      {t('backup.scheduledTimeDesc')}
-                      {backupSettingsSaving && <span style={{ color: '#059669', marginLeft: '8px' }}>💾 Saving...</span>}
-                    </small>
-                  </div>
-                )}
-
-                {/* Backup Location */}
-                <div className="form-group">
-                  <label className="form-label">{t('backup.backupLocation')}</label>
-                  <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                    <input
-                      type="text"
-                      className="form-input"
-                      value={backupSettings.backupDir || 'Not configured'}
-                      readOnly
-                      style={{ flex: 1 }}
-                    />
-                    <button
-                      className="btn btn-secondary"
-                      onClick={async () => {
-                        if (window.electronAPI && window.electronAPI.selectDirectory) {
-                          try {
-                            const dir = await window.electronAPI.selectDirectory();
-                            if (dir) {
-                              await handleBackupSettingsChange({ backupDir: dir });
-                            }
-                          } catch (err) {
-                            setError('Failed to select directory');
-                          }
-                        } else {
-                          setError('Directory selection not available in web mode');
-                        }
-                      }}
-                    >
-                      {t('backup.change')}
-                    </button>
-                  </div>
-                  <small className="form-help">
-                    {t('backup.backupLocationDesc')}
-                  </small>
-                </div>
-
-                {/* Retention Count */}
-                <div className="form-group">
-                  <label className="form-label">{t('backup.retention')}</label>
-                  <select
-                    className="form-input"
-                    value={backupSettings.retentionCount || 5}
-                    onChange={(e) => {
-                      console.log('[Settings] Retention count changed to:', e.target.value);
-                      handleBackupSettingsChange({ retentionCount: parseInt(e.target.value) });
-                    }}
-                    disabled={backupSettingsSaving}
-                    style={{ maxWidth: '200px' }}
-                  >
-                    <option value="3">{t('backup.retention3')}</option>
-                    <option value="5">{t('backup.retention5')}</option>
-                    <option value="7">{t('backup.retention7')}</option>
-                    <option value="10">{t('backup.retention10')}</option>
-                  </select>
-                  <small className="form-help">
-                    {t('backup.retentionDesc')}
-                    {backupSettingsSaving && <span style={{ color: '#059669', marginLeft: '8px' }}>💾 Saving...</span>}
-                  </small>
-                </div>
-              </>
+            {isAdmin() && (
+              <button
+                className={`settings-tab ${activeTab === 'backup' ? 'active' : ''}`}
+                onClick={() => setActiveTab('backup')}
+              >
+                💾 {t('backup.title')}
+              </button>
             )}
+          </>
+        )}
+        {isAdmin() && (
+          <button
+            className={`settings-tab ${activeTab === 'security' ? 'active' : ''}`}
+            onClick={() => setActiveTab('security')}
+          >
+            🔐 {t('settings.security')}
+          </button>
+        )}
+      </div>
 
-            {/* Last Backup Status */}
-            <div className="form-group">
-              <label className="form-label">{t('backup.lastBackupStatus')}</label>
-              {backupStatus && backupStatus.exists ? (
-                <div style={{ padding: '12px', background: '#f0f9ff', borderRadius: '6px', border: '1px solid #bae6fd' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div>
-                      <div style={{ fontWeight: 600, color: '#0369a1' }}>✅ {t('backup.lastBackupSuccess')}</div>
-                      <div style={{ fontSize: '13px', color: '#64748b', marginTop: '4px' }}>
-                        {t('backup.lastBackupDate')}: {backupStatus.date ? new Date(backupStatus.date).toLocaleString() : 'Unknown'}
+      {/* Tab Content */}
+      <div className="settings-tab-content">
+        {/* License Activation Tab */}
+        {activeTab === 'license' && (
+          <div className="card">
+            <div className="card-header">
+              <h2>🔒 {t('settings.licenseActivation')}</h2>
+            </div>
+            <div className="settings-form">
+              {isActivated ? (
+                <div className="license-status-activated">
+                  <div className="license-status-icon">✅</div>
+                  <div className="license-status-content">
+                    <h3>{t('settings.softwareActivated')}</h3>
+                    <p>{t('settings.licenseActive')}</p>
+                    {licenseInfo && (
+                      <div className="license-info">
+                        {licenseInfo.tenantId && (
+                          <p><strong>{t('settings.tenant')}:</strong> {licenseInfo.tenantId}</p>
+                        )}
+                        {licenseInfo.licenseId && (
+                          <p><strong>{t('settings.licenseId')}:</strong> {licenseInfo.licenseId}</p>
+                        )}
                       </div>
-                      {backupStatus.filename && (
-                        <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>
-                          {t('backup.lastBackupFile')}: {backupStatus.filename}
-                        </div>
-                      )}
-                    </div>
-                    <div style={{ fontSize: '12px', color: '#059669', fontWeight: 600 }}>
-                      {t('backup.statusOk')}
+                    )}
+                    <div style={{ marginTop: '15px' }}>
+                      <button
+                        type="button"
+                        onClick={handleRevalidateLicense}
+                        disabled={revalidating}
+                        className="btn btn-secondary"
+                        style={{ fontSize: '14px', padding: '8px 16px' }}
+                      >
+                        {revalidating ? t('settings.checking') : t('settings.checkLicenseStatus')}
+                      </button>
+                      <p style={{ fontSize: '12px', color: '#666', marginTop: '8px' }}>
+                        {t('settings.checkLicenseDesc')}
+                      </p>
                     </div>
                   </div>
                 </div>
               ) : (
-                <div style={{ padding: '12px', background: '#fef3c7', borderRadius: '6px', border: '1px solid #fcd34d' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div>
-                      <div style={{ fontWeight: 600, color: '#92400e' }}>⚠️ {t('backup.noBackupFound')}</div>
-                      <div style={{ fontSize: '13px', color: '#64748b', marginTop: '4px' }}>
-                        {t('backup.noBackupDesc')}
-                      </div>
+                <div className="license-activation-section">
+                  <div className="license-status-unactivated">
+                    <div className="license-status-icon">⚠️</div>
+                    <div className="license-status-content">
+                      <h3>{t('settings.softwareNotActivated')}</h3>
+                      <p>{t('settings.pleaseActivate')}</p>
                     </div>
-                    <div style={{ fontSize: '12px', color: '#d97706', fontWeight: 600 }}>
-                      {t('backup.statusWarning')}
-                    </div>
+                  </div>
+                  <div className="license-activation-form-wrapper">
+                    <LicenseActivation 
+                      onActivationSuccess={async () => {
+                        await checkLicenseStatus();
+                      }}
+                      embedded={true}
+                    />
                   </div>
                 </div>
               )}
             </div>
+          </div>
+        )}
 
-            {/* Manual Backup Button */}
-            <div className="form-group">
-              <button
-                className="btn btn-secondary"
-                onClick={async () => {
-                  try {
-                    setBackupCreating(true);
-                    setError(null);
-                    setSuccess(null);
-                    console.log('[Settings] Creating manual backup...');
-                    const response = await backupAPI.create();
-                    if (response.data.success) {
-                      console.log('[Settings] Manual backup created successfully');
-                      setSuccess(t('backup.backupCreated', { filename: response.data.filename }));
-                      setTimeout(() => setSuccess(null), 5000);
-                      // Refresh backup status after successful backup
-                      await fetchBackupStatus(false);
-                    } else {
-                      throw new Error(response.data.error || t('backup.backupFailed'));
-                    }
-                  } catch (err) {
-                    console.error('[Settings] Error creating backup:', err);
-                    setError(err.response?.data?.error || err.message || t('backup.backupFailed'));
-                  } finally {
-                    setBackupCreating(false);
-                  }
-                }}
-                disabled={backupCreating || backupSettingsSaving}
-              >
-                {backupCreating ? t('backup.creating') : `💾 ${t('backup.createManual')}`}
-              </button>
-              <small className="form-help">
-                {t('backup.createManualDesc')}
-              </small>
+        {/* Shop Information Tab */}
+        {activeTab === 'shop' && (
+          <div className="card">
+            <div className="card-header">
+              <h2>{t('settings.shopInformation')}</h2>
             </div>
+            <div className="settings-form">
+              <div className="form-group">
+                <label className="form-label">{t('settings.shopName')}</label>
+                <input
+                  type="text"
+                  className="form-input"
+                  value={shopName}
+                  onChange={(e) => setShopName(e.target.value)}
+                  placeholder={t('settings.enterShopName')}
+                  disabled={readOnly || !isAdmin()}
+                />
+              </div>
 
-            {/* Restore Button */}
-            <div className="form-group">
-              <button
-                className="btn btn-danger"
-                onClick={handleRestore}
-                disabled={!backupStatus?.exists}
-                style={{ background: '#dc2626', color: 'white' }}
-              >
-                {`🔄 ${t('backup.restore')}`}
-              </button>
-              <small className="form-help" style={{ color: '#dc2626' }}>
-                {t('backup.restoreDesc')}
-              </small>
+              <div className="form-group">
+                <label className="form-label">{t('settings.shopAddress')}</label>
+                <textarea
+                  className="form-input"
+                  rows="3"
+                  value={shopAddress}
+                  onChange={(e) => setShopAddress(e.target.value)}
+                  placeholder={t('settings.enterShopAddress')}
+                  disabled={readOnly || !isAdmin()}
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">{t('settings.shopPhone')}</label>
+                <input
+                  type="text"
+                  className="form-input"
+                  value={shopPhone}
+                  onChange={(e) => setShopPhone(e.target.value)}
+                  placeholder={t('settings.enterShopPhone')}
+                  disabled={readOnly || !isAdmin()}
+                />
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Restore Modal */}
-      {showRestoreModal && (
-        <RestoreModal
-          onClose={() => setShowRestoreModal(false)}
-          onSuccess={handleRestoreSuccess}
-        />
-      )}
+        {/* Language & Appearance Tab */}
+        {activeTab === 'language' && (
+          <div className="card">
+            <div className="card-header">
+              <h2>{t('settings.languageAppearance')}</h2>
+            </div>
+            <div className="settings-form">
+              <div className="form-group">
+                <label className="form-label">{t('settings.language')}</label>
+                <select
+                  className="form-input"
+                  value={language}
+                  onChange={(e) => setLanguage(e.target.value)}
+                  disabled={readOnly || !isAdmin()}
+                >
+                  <option value="en">English</option>
+                  <option value="ur">Urdu (اردو)</option>
+                </select>
+                <small className="form-help">
+                  {t('settings.selectLanguage')}
+                </small>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">{t('settings.theme')}</label>
+                <select
+                  className="form-input"
+                  value={theme}
+                  onChange={(e) => setTheme(e.target.value)}
+                  disabled={readOnly || !isAdmin()}
+                >
+                  <option value="light">Light Mode</option>
+                </select>
+                <small className="form-help">
+                  {t('settings.appTheme')}
+                </small>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Printer Configuration Tab */}
+        {activeTab === 'printer' && !readOnly && isAdmin() && (
+          <div className="card">
+            <div className="card-header">
+              <h2>{t('settings.printerConfiguration')}</h2>
+            </div>
+            <div className="settings-form">
+              <div className="form-group">
+                <label className="form-label">{t('settings.selectPrinter')}</label>
+                <select
+                  className="form-input"
+                  value={selectedPrinter}
+                  onChange={(e) => setSelectedPrinter(e.target.value)}
+                  disabled={readOnly || !isAdmin()}
+                >
+                  <option value="">-- {t('settings.selectPrinter')} --</option>
+                  {printers.map((printer, index) => (
+                    <option key={index} value={printer.name}>
+                      {printer.name} {printer.description ? `- ${printer.description}` : ''}
+                    </option>
+                  ))}
+                </select>
+                <small className="form-help">
+                  {t('settings.selectThermalPrinter')}
+                </small>
+              </div>
+
+              <div className="form-actions">
+                <button
+                  className="btn btn-secondary"
+                  onClick={handleTestPrint}
+                  disabled={!selectedPrinter}
+                >
+                  {t('settings.testPrint')}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Backup Tab */}
+        {/* Data Safety & Backup Tab - Admin only */}
+        {activeTab === 'backup' && !readOnly && isAdmin() && (
+          <div className="card">
+            <div className="card-header">
+              <h2>💾 {t('backup.title')}</h2>
+            </div>
+            <div className="settings-form">
+              {/* Enable Auto Backup */}
+              <div className="form-group">
+                <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <input
+                    type="checkbox"
+                    checked={backupSettings.enabled}
+                    onChange={(e) => handleBackupSettingsChange({ enabled: e.target.checked })}
+                    style={{ width: '18px', height: '18px' }}
+                  />
+                  {t('backup.enableAutoBackup')}
+                </label>
+                <small className="form-help">
+                  {t('backup.enableAutoBackupDesc')}
+                </small>
+              </div>
+
+              {backupSettings.enabled && (
+                <>
+                  {/* Backup Mode */}
+                  <div className="form-group">
+                    <label className="form-label">{t('backup.backupMode')}</label>
+                    <select
+                      className="form-input"
+                      value={backupSettings.mode || 'scheduled'}
+                      onChange={(e) => {
+                        console.log('[Settings] Backup mode changed to:', e.target.value);
+                        handleBackupSettingsChange({ mode: e.target.value });
+                      }}
+                      disabled={backupSettingsSaving}
+                    >
+                      <option value="app_start">{t('backup.modeAppStart')}</option>
+                      <option value="scheduled">{t('backup.modeScheduled')}</option>
+                    </select>
+                    <small className="form-help">
+                      {t('backup.backupModeDesc')}
+                      {backupSettingsSaving && <span style={{ color: '#059669', marginLeft: '8px' }}>💾 Saving...</span>}
+                    </small>
+                  </div>
+
+                  {/* Scheduled Time (only if mode is scheduled) */}
+                  {backupSettings.mode === 'scheduled' && (
+                    <div className="form-group">
+                      <label className="form-label">{t('backup.scheduledTime')}</label>
+                      <input
+                        type="time"
+                        className="form-input"
+                        value={backupSettings.scheduledTime || '02:00'}
+                        onChange={(e) => {
+                          console.log('[Settings] Scheduled time changed to:', e.target.value);
+                          handleBackupSettingsChange({ scheduledTime: e.target.value });
+                        }}
+                        disabled={backupSettingsSaving}
+                        style={{ maxWidth: '200px' }}
+                      />
+                      <small className="form-help">
+                        {t('backup.scheduledTimeDesc')}
+                        {backupSettingsSaving && <span style={{ color: '#059669', marginLeft: '8px' }}>💾 Saving...</span>}
+                      </small>
+                    </div>
+                  )}
+
+                  {/* Backup Location */}
+                  <div className="form-group">
+                    <label className="form-label">{t('backup.backupLocation')}</label>
+                    <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                      <input
+                        type="text"
+                        className="form-input"
+                        value={backupSettings.backupDir || 'Not configured'}
+                        readOnly
+                        style={{ flex: 1 }}
+                      />
+                      <button
+                        className="btn btn-secondary"
+                        onClick={async () => {
+                          if (window.electronAPI && window.electronAPI.selectDirectory) {
+                            try {
+                              const dir = await window.electronAPI.selectDirectory();
+                              if (dir) {
+                                await handleBackupSettingsChange({ backupDir: dir });
+                              }
+                            } catch (err) {
+                              setError('Failed to select directory');
+                            }
+                          } else {
+                            setError('Directory selection not available in web mode');
+                          }
+                        }}
+                      >
+                        {t('backup.change')}
+                      </button>
+                    </div>
+                    <small className="form-help">
+                      {t('backup.backupLocationDesc')}
+                    </small>
+                  </div>
+
+                  {/* Retention Count */}
+                  <div className="form-group">
+                    <label className="form-label">{t('backup.retention')}</label>
+                    <select
+                      className="form-input"
+                      value={backupSettings.retentionCount || 5}
+                      onChange={(e) => {
+                        console.log('[Settings] Retention count changed to:', e.target.value);
+                        handleBackupSettingsChange({ retentionCount: parseInt(e.target.value) });
+                      }}
+                      disabled={backupSettingsSaving}
+                      style={{ maxWidth: '200px' }}
+                    >
+                      <option value="3">{t('backup.retention3')}</option>
+                      <option value="5">{t('backup.retention5')}</option>
+                      <option value="7">{t('backup.retention7')}</option>
+                      <option value="10">{t('backup.retention10')}</option>
+                    </select>
+                    <small className="form-help">
+                      {t('backup.retentionDesc')}
+                      {backupSettingsSaving && <span style={{ color: '#059669', marginLeft: '8px' }}>💾 Saving...</span>}
+                    </small>
+                  </div>
+                </>
+              )}
+
+              {/* Last Backup Status */}
+              <div className="form-group">
+                <label className="form-label">{t('backup.lastBackupStatus')}</label>
+                {backupStatus && backupStatus.exists ? (
+                  <div style={{ padding: '12px', background: '#f0f9ff', borderRadius: '6px', border: '1px solid #bae6fd' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div>
+                        <div style={{ fontWeight: 600, color: '#0369a1' }}>✅ {t('backup.lastBackupSuccess')}</div>
+                        <div style={{ fontSize: '13px', color: '#64748b', marginTop: '4px' }}>
+                          {t('backup.lastBackupDate')}: {backupStatus.date ? new Date(backupStatus.date).toLocaleString() : 'Unknown'}
+                        </div>
+                        {backupStatus.filename && (
+                          <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>
+                            {t('backup.lastBackupFile')}: {backupStatus.filename}
+                          </div>
+                        )}
+                      </div>
+                      <div style={{ fontSize: '12px', color: '#059669', fontWeight: 600 }}>
+                        {t('backup.statusOk')}
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{ padding: '12px', background: '#fef3c7', borderRadius: '6px', border: '1px solid #fcd34d' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div>
+                        <div style={{ fontWeight: 600, color: '#92400e' }}>⚠️ {t('backup.noBackupFound')}</div>
+                        <div style={{ fontSize: '13px', color: '#64748b', marginTop: '4px' }}>
+                          {t('backup.noBackupDesc')}
+                        </div>
+                      </div>
+                      <div style={{ fontSize: '12px', color: '#d97706', fontWeight: 600 }}>
+                        {t('backup.statusWarning')}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Manual Backup Button */}
+              <div className="form-group">
+                <button
+                  className="btn btn-secondary"
+                  onClick={async () => {
+                    try {
+                      setBackupCreating(true);
+                      setError(null);
+                      setSuccess(null);
+                      console.log('[Settings] Creating manual backup...');
+                      const response = await backupAPI.create();
+                      if (response.data.success) {
+                        console.log('[Settings] Manual backup created successfully');
+                        setSuccess(t('backup.backupCreated', { filename: response.data.filename }));
+                        setTimeout(() => setSuccess(null), 5000);
+                        // Refresh backup status after successful backup
+                        await fetchBackupStatus(false);
+                      } else {
+                        throw new Error(response.data.error || t('backup.backupFailed'));
+                      }
+                    } catch (err) {
+                      console.error('[Settings] Error creating backup:', err);
+                      setError(err.response?.data?.error || err.message || t('backup.backupFailed'));
+                    } finally {
+                      setBackupCreating(false);
+                    }
+                  }}
+                  disabled={backupCreating || backupSettingsSaving}
+                >
+                  {backupCreating ? t('backup.creating') : `💾 ${t('backup.createManual')}`}
+                </button>
+                <small className="form-help">
+                  {t('backup.createManualDesc')}
+                </small>
+              </div>
+
+              {/* Restore Button */}
+              <div className="form-group">
+                <button
+                  className="btn btn-danger"
+                  onClick={handleRestore}
+                  disabled={!backupStatus?.exists}
+                  style={{ background: '#dc2626', color: 'white' }}
+                >
+                  {`🔄 ${t('backup.restore')}`}
+                </button>
+                <small className="form-help" style={{ color: '#dc2626' }}>
+                  {t('backup.restoreDesc')}
+                </small>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Security Tab */}
+        {activeTab === 'security' && isAdmin() && (
+          <div className="card">
+            <div className="card-header">
+              <h2>🔐 {t('settings.security')}</h2>
+            </div>
+            <div className="settings-form">
+              {/* Change Password */}
+              <div className="form-group">
+                <label className="form-label">{t('settings.changePassword')}</label>
+                <input
+                  type="password"
+                  className="form-input"
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  placeholder={t('settings.currentPassword')}
+                  style={{ marginBottom: '10px' }}
+                />
+                <input
+                  type="password"
+                  className="form-input"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder={t('settings.newPassword')}
+                  style={{ marginBottom: '10px' }}
+                />
+                <input
+                  type="password"
+                  className="form-input"
+                  value={confirmNewPassword}
+                  onChange={(e) => setConfirmNewPassword(e.target.value)}
+                  placeholder={t('settings.confirmNewPassword')}
+                  style={{ marginBottom: '10px' }}
+                />
+                <button
+                  className="btn btn-secondary"
+                  onClick={async () => {
+                    if (!currentPassword || !newPassword) {
+                      setError(t('settings.passwordRequired'));
+                      return;
+                    }
+                    if (newPassword !== confirmNewPassword) {
+                      setError(t('settings.passwordsDoNotMatch'));
+                      return;
+                    }
+                    try {
+                      setChangingPassword(true);
+                      setError(null);
+                      await authAPI.changePassword({ currentPassword, newPassword });
+                      setSuccess(t('settings.passwordChanged'));
+                      setCurrentPassword('');
+                      setNewPassword('');
+                      setConfirmNewPassword('');
+                      setTimeout(() => setSuccess(null), 5000);
+                    } catch (err) {
+                      setError(err.response?.data?.message || t('settings.passwordChangeFailed'));
+                    } finally {
+                      setChangingPassword(false);
+                    }
+                  }}
+                  disabled={changingPassword}
+                >
+                  {changingPassword ? t('settings.changing') : t('settings.changePassword')}
+                </button>
+              </div>
+
+              {/* Users Management */}
+              <div className="form-group">
+                <button
+                  className="btn btn-secondary"
+                  onClick={async () => {
+                    try {
+                      const response = await usersAPI.getAll();
+                      setUsers(response.data.users);
+                      setShowUsers(!showUsers);
+                    } catch (err) {
+                      setError(err.response?.data?.message || t('settings.failedToLoadUsers'));
+                    }
+                  }}
+                >
+                  {showUsers ? '👥 ' + t('settings.hideUsers') : '👥 ' + t('settings.viewUsers')}
+                </button>
+                {showUsers && users.length > 0 && (
+                  <div style={{ marginTop: '15px', border: '1px solid #ddd', borderRadius: '6px', padding: '15px' }}>
+                    <table style={{ width: '100%', fontSize: '14px' }}>
+                      <thead>
+                        <tr style={{ borderBottom: '2px solid #ddd' }}>
+                          <th style={{ textAlign: 'left', padding: '8px' }}>{t('settings.username')}</th>
+                          <th style={{ textAlign: 'left', padding: '8px' }}>{t('settings.name')}</th>
+                          <th style={{ textAlign: 'left', padding: '8px' }}>{t('settings.role')}</th>
+                          <th style={{ textAlign: 'left', padding: '8px' }}>{t('settings.status')}</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {users.map((u) => (
+                          <tr key={u.user_id} style={{ borderBottom: '1px solid #eee' }}>
+                            <td style={{ padding: '8px' }}>{u.username}</td>
+                            <td style={{ padding: '8px' }}>{u.name}</td>
+                            <td style={{ padding: '8px', textTransform: 'capitalize' }}>{u.role}</td>
+                            <td style={{ padding: '8px' }}>
+                              <span style={{ color: u.is_active ? '#10b981' : '#ef4444' }}>
+                                {u.is_active ? t('common.active') : t('common.inactive')}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+
+              {/* Audit Logs */}
+              <div className="form-group">
+                <button
+                  className="btn btn-secondary"
+                  onClick={async () => {
+                    try {
+                      const response = await usersAPI.getAuditLogs({ limit: 50 });
+                      setAuditLogs(response.data.logs);
+                      setShowAuditLogs(!showAuditLogs);
+                    } catch (err) {
+                      setError(err.response?.data?.message || t('settings.failedToLoadLogs'));
+                    }
+                  }}
+                >
+                  {showAuditLogs ? '📋 ' + t('settings.hideAuditLogs') : '📋 ' + t('settings.viewAuditLogs')}
+                </button>
+                {showAuditLogs && auditLogs.length > 0 && (
+                  <div style={{ marginTop: '15px', border: '1px solid #ddd', borderRadius: '6px', padding: '15px', maxHeight: '400px', overflowY: 'auto' }}>
+                    <table style={{ width: '100%', fontSize: '12px' }}>
+                      <thead>
+                        <tr style={{ borderBottom: '2px solid #ddd' }}>
+                          <th style={{ textAlign: 'left', padding: '6px' }}>{t('settings.timestamp')}</th>
+                          <th style={{ textAlign: 'left', padding: '6px' }}>{t('settings.user')}</th>
+                          <th style={{ textAlign: 'left', padding: '6px' }}>{t('settings.action')}</th>
+                          <th style={{ textAlign: 'left', padding: '6px' }}>{t('settings.table')}</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {auditLogs.map((log) => (
+                          <tr key={log.log_id} style={{ borderBottom: '1px solid #eee' }}>
+                            <td style={{ padding: '6px' }}>{new Date(log.timestamp).toLocaleString()}</td>
+                            <td style={{ padding: '6px' }}>{log.username || 'System'}</td>
+                            <td style={{ padding: '6px' }}>{log.action}</td>
+                            <td style={{ padding: '6px' }}>{log.table_name || '-'}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Save Button */}
-      {!readOnly && (
+      {!readOnly && isAdmin() && (
         <div className="settings-actions">
           <button
             className="btn btn-primary"
@@ -928,10 +1154,25 @@ const Settings = ({ readOnly = false }) => {
           </button>
         </div>
       )}
+      {!isAdmin() && (
+        <div className="settings-actions">
+          <div className="read-only-notice" style={{ padding: '15px', backgroundColor: '#f0f0f0', borderRadius: '5px', color: '#666' }}>
+            {t('settings.viewOnlyNotice')}
+          </div>
+        </div>
+      )}
       {readOnly && (
         <div className="settings-actions">
           <div className="read-only-notice">{t('settings.readOnlyNotice')}</div>
         </div>
+      )}
+
+      {/* Restore Modal */}
+      {showRestoreModal && (
+        <RestoreModal
+          onClose={() => setShowRestoreModal(false)}
+          onSuccess={handleRestoreSuccess}
+        />
       )}
     </div>
   );

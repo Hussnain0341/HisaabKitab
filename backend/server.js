@@ -89,8 +89,24 @@ console.log('[Server] Route: GET /api/license/test');
 console.log('[Server] ========================================\n');
 app.use('/api/license', require('./routes/license'));
 
-// Setup routes (no license check required)
+// Authentication routes (no license check required, but may require auth)
+console.log('[Server] Registering Authentication Routes...');
+console.log('[Server] Route: POST /api/auth/login');
+console.log('[Server] Route: POST /api/auth/logout');
+console.log('[Server] Route: GET /api/auth/me');
+console.log('[Server] Route: POST /api/auth/forgot-password');
+console.log('[Server] Route: POST /api/auth/reset-password');
+console.log('[Server] Route: POST /api/auth/change-password');
+app.use('/api/auth', require('./routes/auth'));
+
+// First-time setup routes (no license check required)
+console.log('[Server] Registering Setup Routes...');
+console.log('[Server] Route: GET /api/setup/check');
+console.log('[Server] Route: POST /api/setup/create-admin');
+console.log('[Server] Route: GET /api/setup-auth/check-first-time');
+console.log('[Server] Route: POST /api/setup-auth/create-admin');
 app.use('/api/setup', require('./routes/setup'));
+app.use('/api/setup-auth', require('./routes/setupAuth'));
 
 // Serve React app static files FIRST (before license check)
 // This ensures the React app can load even without a license
@@ -107,11 +123,13 @@ app.use((req, res, next) => {
   // - Health check
   // - License endpoints
   // - Setup endpoints
+  // - Auth endpoints (login/logout)
   // - Static files (React app)
   if (
     req.path === '/api/health' || 
     req.path.startsWith('/api/license') || 
     req.path.startsWith('/api/setup') ||
+    req.path.startsWith('/api/auth') ||
     req.path.startsWith('/static/') ||
     (!req.path.startsWith('/api/') && req.method === 'GET')
   ) {
@@ -129,12 +147,14 @@ app.use((req, res, next) => {
   // - Health check
   // - License endpoints (they handle their own checks)
   // - Setup endpoints
+  // - Auth endpoints (login/logout)
   // - Settings endpoints (must always be accessible for license activation and language changes)
   // - Static files
   if (
     req.path === '/api/health' || 
     req.path.startsWith('/api/license') || 
     req.path.startsWith('/api/setup') ||
+    req.path.startsWith('/api/auth') ||
     req.path.startsWith('/api/settings') ||
     req.path.startsWith('/static/') ||
     (!req.path.startsWith('/api/') && req.method === 'GET')
@@ -159,6 +179,8 @@ app.use('/api/supplier-payments', require('./routes/supplier-payments'));
 app.use('/api/reports', require('./routes/reports'));
 app.use('/api/settings', require('./routes/settings'));
 app.use('/api/backup', require('./routes/backup'));
+app.use('/api/users', require('./routes/users'));
+app.use('/api/notifications', require('./routes/notifications').router);
 
 // Catch-all route for React app (must be last, after all API routes)
 // This serves index.html for any non-API routes (React Router)

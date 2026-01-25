@@ -13,14 +13,19 @@ import Purchases from './components/Purchases';
 import Expenses from './components/Expenses';
 import RateList from './components/RateList';
 import Invoices from './components/Invoices';
+import Sales from './components/Sales';
 import Reports from './components/Reports';
 import Settings from './components/Settings';
+import Users from './components/Users';
 import Sidebar from './components/Sidebar';
+import Header from './components/Header';
 import ConnectionStatus from './components/ConnectionStatus';
 import ErrorBoundary from './components/ErrorBoundary';
 import LicenseBanner from './components/LicenseBanner';
-import DatabaseSetup from './components/DatabaseSetup';
+import Login from './components/Login';
+import FirstTimeSetup from './components/FirstTimeSetup';
 import { LicenseProvider, useLicense } from './contexts/LicenseContext';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { settingsAPI } from './services/api';
 
 // Inner component that uses location (must be inside Router)
@@ -29,15 +34,14 @@ function AppContentWithRouter() {
   return <AppContent location={location} />;
 }
 
-// Inner App component that uses license context
+// Inner App component that uses license and auth contexts
 function AppContent({ location }) {
   const { i18n } = useTranslation();
   const { licenseState, canPerformOperations, checkLicenseStatus, isOperationsDisabled, loading: licenseLoading } = useLicense();
+  const { user, loading: authLoading, needsSetup, checkingSetup } = useAuth();
   const [activeMenu, setActiveMenu] = useState('dashboard');
   const [readOnlyMode, setReadOnlyMode] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
-  const [showDatabaseSetup, setShowDatabaseSetup] = useState(false);
-  const [dbSetupChecked, setDbSetupChecked] = useState(false);
   
   // Check if we're on Settings page
   const isSettingsPage = location?.pathname === '/settings';
@@ -61,10 +65,6 @@ function AppContent({ location }) {
     loadLanguageFromSettings();
   }, [i18n]);
 
-  // Check database setup on mount
-  useEffect(() => {
-    checkDatabaseSetup();
-  }, []);
 
   // CRITICAL FIX: Only set read-only mode AFTER license check completes
   // Don't disable buttons while license is still loading
@@ -118,6 +118,7 @@ function AppContent({ location }) {
       console.log('[App] License check complete. isOperationsDisabled:', isOperationsDisabled, 'licenseState:', licenseState, 'licenseLoading:', licenseLoading);
       
       // CRITICAL: Directly disable all buttons via JavaScript
+      // IMPORTANT: Do NOT disable inputs - they are handled via CSS only to avoid focus issues
       const disableAllButtons = () => {
         // CRITICAL: If we're on Settings page, DON'T disable anything and re-enable any previously disabled buttons
         if (isSettingsPage) {
@@ -129,6 +130,10 @@ function AppContent({ location }) {
           console.log('[App] Settings page detected - all buttons enabled');
           return;
         }
+        
+        // Get currently focused element to preserve focus
+        const activeElement = document.activeElement;
+        const wasInputFocused = activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA' || activeElement.tagName === 'SELECT');
         
         const allButtons = appElement.querySelectorAll('button');
         let disabledCount = 0;
@@ -198,6 +203,13 @@ function AppContent({ location }) {
             return;
           }
           
+          // CRITICAL: Don't disable button if user is currently interacting with a form
+          // This prevents focus issues when user is typing
+          if (wasInputFocused && button.closest('form')) {
+            skippedCount++;
+            return;
+          }
+          
           // Disable the button
           if (!button.disabled) {
             button.disabled = true;
@@ -208,21 +220,49 @@ function AppContent({ location }) {
         if (disabledCount > 0) {
           console.log(`[App] Disabled ${disabledCount} buttons, skipped ${skippedCount} navigation/Settings buttons`);
         }
+        
+        // Restore focus if it was on an input
+        if (wasInputFocused && activeElement && document.body.contains(activeElement)) {
+          // Use requestAnimationFrame to restore focus after DOM updates
+          requestAnimationFrame(() => {
+            try {
+              activeElement.focus();
+            } catch (e) {
+              // Ignore focus errors (element might have been removed)
+            }
+          });
+        }
       };
       
       if (isOperationsDisabled && !isSettingsPage) {
         appElement.classList.add('operations-disabled');
         console.log('[App] ✅ Operations DISABLED - license not activated. Class added to .app element');
         
-        // Disable buttons immediately and repeatedly to catch dynamically added ones
+        // Disable buttons immediately
         disableAllButtons();
         
-        // Disable buttons multiple times to catch all render cycles
+        // Use debounced approach to avoid constant DOM manipulation
+        // Only disable buttons when DOM changes, not constantly
+        let disableTimeout = null;
+        const debouncedDisableButtons = () => {
+          if (disableTimeout) {
+            clearTimeout(disableTimeout);
+          }
+          // Wait a bit to avoid interfering with user input
+          disableTimeout = setTimeout(() => {
+            // Only disable if user is not currently interacting with inputs
+            const activeElement = document.activeElement;
+            const isInputFocused = activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA' || activeElement.tagName === 'SELECT');
+            if (!isInputFocused) {
+              disableAllButtons();
+            }
+          }, 300);
+        };
+        
+        // Disable buttons after initial render (with delay to avoid interfering with focus)
         const timeouts = [
-          setTimeout(disableAllButtons, 50),
-          setTimeout(disableAllButtons, 200),
-          setTimeout(disableAllButtons, 500),
-          setTimeout(disableAllButtons, 1000)
+          setTimeout(debouncedDisableButtons, 100),
+          setTimeout(debouncedDisableButtons, 500)
         ];
         
         // CRITICAL: Add click event listener to prevent button clicks (backup to CSS)
@@ -282,21 +322,37 @@ function AppContent({ location }) {
         appElement.addEventListener('click', handleButtonClick, true);
         
         // Use MutationObserver to catch dynamically added buttons
+        // Use debounced approach to avoid constant DOM manipulation
         const observer = new MutationObserver((mutations) => {
-          disableAllButtons();
+          // Only process if user is not currently interacting with inputs
+          const activeElement = document.activeElement;
+          const isInputFocused = activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA' || activeElement.tagName === 'SELECT');
+          if (!isInputFocused) {
+            debouncedDisableButtons();
+          }
         });
         
         observer.observe(appElement, {
           childList: true,
           subtree: true,
-          attributes: false
+          attributes: false,
+          attributeFilter: ['disabled'] // Only watch disabled attribute changes
         });
         
-        // Also periodically check for new buttons (safety net)
-        const intervalId = setInterval(disableAllButtons, 2000);
+        // Reduced frequency - check less often to avoid interfering with user input
+        const intervalId = setInterval(() => {
+          const activeElement = document.activeElement;
+          const isInputFocused = activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA' || activeElement.tagName === 'SELECT');
+          if (!isInputFocused) {
+            debouncedDisableButtons();
+          }
+        }, 5000); // Increased from 2000ms to 5000ms
         
         return () => {
           timeouts.forEach(clearTimeout);
+          if (disableTimeout) {
+            clearTimeout(disableTimeout);
+          }
           clearInterval(intervalId);
           appElement.removeEventListener('click', handleButtonClick, true);
           observer.disconnect();
@@ -362,33 +418,6 @@ function AppContent({ location }) {
     requestAnimationFrame(setupDisabling);
   }, [isOperationsDisabled, licenseState, licenseLoading, isSettingsPage]);
 
-  const checkDatabaseSetup = async () => {
-    try {
-      const { setupAPI } = await import('./services/api');
-      const response = await setupAPI.check();
-      
-      if (!response.data.tablesExist) {
-        setShowDatabaseSetup(true);
-      } else {
-        setShowDatabaseSetup(false);
-        // License check happens automatically in LicenseContext on mount
-        // No need to call checkLicenseStatus() here
-      }
-      setDbSetupChecked(true);
-    } catch (error) {
-      console.error('Error checking database setup:', error);
-      // Assume setup is needed if check fails
-      setShowDatabaseSetup(true);
-      setDbSetupChecked(true);
-    }
-  };
-
-  const handleDatabaseSetupComplete = () => {
-    setShowDatabaseSetup(false);
-    // License check happens automatically in LicenseContext
-    // Only manually refresh if needed
-    checkLicenseStatus();
-  };
 
 
   const handleRefresh = () => {
@@ -397,15 +426,13 @@ function AppContent({ location }) {
     window.dispatchEvent(new Event('data-refresh'));
   };
 
-  // Show database setup screen if needed
-  if (showDatabaseSetup) {
-    return (
-      <DatabaseSetup onSetupComplete={handleDatabaseSetupComplete} />
-    );
+  // Show first-time setup if needed (PRIORITY - check this first)
+  if (needsSetup) {
+    return <FirstTimeSetup />;
   }
 
-  // Show loading screen while checking database setup
-  if (!dbSetupChecked) {
+  // Show loading screen while checking auth
+  if (authLoading || checkingSetup) {
     return (
       <div className="app-loading">
         <div className="loading-spinner">
@@ -416,6 +443,11 @@ function AppContent({ location }) {
     );
   }
 
+  // Show login if not authenticated
+  if (!user) {
+    return <Login />;
+  }
+
   // NEVER block startup - always show app
   // Activation is handled in Settings, not on startup
 
@@ -423,6 +455,7 @@ function AppContent({ location }) {
   return (
     <div className="app">
       <LicenseBanner />
+      <Header />
       <ConnectionStatus 
         onRefresh={handleRefresh}
         readOnlyMode={readOnlyMode}
@@ -443,7 +476,9 @@ function AppContent({ location }) {
             <Route path="/expenses" element={<Expenses key={refreshTrigger} readOnly={readOnlyMode} />} />
             <Route path="/rate-list" element={<RateList key={readOnlyMode} />} />
             <Route path="/invoices" element={<Invoices key={refreshTrigger} readOnly={readOnlyMode} />} />
+            <Route path="/sales" element={<Sales key={refreshTrigger} readOnly={readOnlyMode} />} />
             <Route path="/reports" element={<Reports key={refreshTrigger} readOnly={readOnlyMode} />} />
+            <Route path="/users" element={<Users key={refreshTrigger} />} />
             <Route path="/settings" element={<Settings key={refreshTrigger} readOnly={readOnlyMode} />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
@@ -453,14 +488,16 @@ function AppContent({ location }) {
   );
 }
 
-// Main App component wrapped with LicenseProvider and Router
+// Main App component wrapped with AuthProvider, LicenseProvider and Router
 function App() {
   return (
-    <LicenseProvider>
-      <Router>
-        <AppContentWithRouter />
-      </Router>
-    </LicenseProvider>
+    <AuthProvider>
+      <LicenseProvider>
+        <Router>
+          <AppContentWithRouter />
+        </Router>
+      </LicenseProvider>
+    </AuthProvider>
   );
 }
 

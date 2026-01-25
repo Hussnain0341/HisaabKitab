@@ -5,10 +5,15 @@ import './DatabaseSetup.css';
 function DatabaseSetup({ onSetupComplete }) {
   const [status, setStatus] = useState('checking'); // 'checking', 'needs-setup', 'migrating', 'success', 'error'
   const [error, setError] = useState('');
+  const [hasChecked, setHasChecked] = useState(false);
 
   useEffect(() => {
-    checkDatabaseSetup();
-  }, []);
+    // Only check once
+    if (!hasChecked) {
+      checkDatabaseSetup();
+      setHasChecked(true);
+    }
+  }, [hasChecked]);
 
   const checkDatabaseSetup = async () => {
     try {

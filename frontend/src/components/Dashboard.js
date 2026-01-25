@@ -94,7 +94,9 @@ const Dashboard = () => {
           <div className="summary-card-content">
             <div className="summary-card-label">{t('dashboard.todayProfit')}</div>
             <div className={`summary-card-value ${dashboardData.todayProfit >= 0 ? 'profit-positive' : 'profit-negative'}`}>
-              {formatCurrency(dashboardData.todayProfit)}
+              {dashboardData.todayProfit !== null && dashboardData.todayProfit !== undefined 
+                ? formatCurrency(dashboardData.todayProfit) 
+                : t('dashboard.notAvailable')}
             </div>
           </div>
         </div>
@@ -103,7 +105,11 @@ const Dashboard = () => {
           <div className="summary-card-icon">💵</div>
           <div className="summary-card-content">
             <div className="summary-card-label">{t('dashboard.cashInHand')}</div>
-            <div className="summary-card-value">{formatCurrency(dashboardData.cashInHand)}</div>
+            <div className="summary-card-value">
+              {dashboardData.cashInHand !== null && dashboardData.cashInHand !== undefined 
+                ? formatCurrency(dashboardData.cashInHand) 
+                : t('dashboard.notAvailable')}
+            </div>
           </div>
         </div>
 
@@ -126,7 +132,11 @@ const Dashboard = () => {
           <div className="summary-card-icon">🏪</div>
           <div className="summary-card-content">
             <div className="summary-card-label">{t('dashboard.supplierDue')}</div>
-            <div className="summary-card-value profit-negative">{formatCurrency(dashboardData.supplierDue)}</div>
+            <div className="summary-card-value profit-negative">
+              {dashboardData.supplierDue !== null && dashboardData.supplierDue !== undefined 
+                ? formatCurrency(dashboardData.supplierDue) 
+                : t('dashboard.notAvailable')}
+            </div>
             <div className="summary-card-hint">{t('dashboard.clickToViewList')}</div>
           </div>
         </div>

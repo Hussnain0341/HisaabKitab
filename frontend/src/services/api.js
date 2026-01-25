@@ -11,10 +11,30 @@ const api = axios.create({
   },
 });
 
+// Add device ID to all requests
+api.interceptors.request.use((config) => {
+  const deviceId = localStorage.getItem('deviceId') || 'unknown';
+  config.headers['x-device-id'] = deviceId;
+  
+  // Add session ID if available
+  const sessionId = localStorage.getItem('sessionId');
+  if (sessionId) {
+    config.headers['x-session-id'] = sessionId;
+  }
+  
+  return config;
+});
+
 // Add response interceptor to handle read-only errors
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    if (error.response?.status === 401) {
+      // Session expired or unauthorized
+      localStorage.removeItem('sessionId');
+      localStorage.removeItem('user');
+      window.location.href = '/login';
+    }
     if (error.response?.data?.readOnly) {
       console.warn('Read-only mode: Operation blocked');
     }
@@ -52,9 +72,12 @@ export const supplierPaymentsAPI = {
 
 // Sales API
 export const salesAPI = {
-  getAll: () => api.get('/sales'),
+  getAll: (params) => api.get('/sales', { params }),
   getById: (id) => api.get(`/sales/${id}`),
   create: (data) => api.post('/sales', data),
+  update: (id, data) => api.put(`/sales/${id}`, data),
+  delete: (id) => api.delete(`/sales/${id}`),
+  print: (id) => api.get(`/sales/${id}/print`),
 };
 
 // Reports API
@@ -158,8 +181,37 @@ export const backupAPI = {
 
 // Setup API
 export const setupAPI = {
-  check: () => api.get('/setup/check'),
+  check: () => api.get('/setup-auth/check-first-time'),
   migrate: () => api.post('/setup/migrate'),
+  createAdmin: (data) => api.post('/setup-auth/create-admin', data),
+};
+
+// Authentication API
+export const authAPI = {
+  login: (credentials) => api.post('/auth/login', credentials),
+  logout: () => api.post('/auth/logout'),
+  getMe: () => api.get('/auth/me'),
+  forgotPassword: (data) => api.post('/auth/forgot-password', data),
+  resetPassword: (data) => api.post('/auth/reset-password', data),
+  changePassword: (data) => api.post('/auth/change-password', data),
+};
+
+// Users API (Admin only)
+export const usersAPI = {
+  getAll: () => api.get('/users'),
+  create: (data) => api.post('/users', data),
+  update: (id, data) => api.put(`/users/${id}`, data),
+  delete: (id) => api.delete(`/users/${id}`),
+  getAuditLogs: (params) => api.get('/users/audit-logs', { params }),
+  generatePassword: (id) => api.post(`/users/${id}/generate-password`),
+};
+
+// Notifications API
+export const notificationsAPI = {
+  getAll: (params) => api.get('/notifications', { params }),
+  markAsRead: (id) => api.put(`/notifications/${id}/read`),
+  markAllAsRead: () => api.put('/notifications/read-all'),
+  getUnreadCount: () => api.get('/notifications/unread-count'),
 };
 
 export default api;

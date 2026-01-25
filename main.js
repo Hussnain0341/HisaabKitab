@@ -69,7 +69,9 @@ function createWindow() {
       nodeIntegration: false,
       contextIsolation: true,
       preload: path.join(__dirname, 'preload.js'),
-      webSecurity: true
+      webSecurity: true,
+      // Enable ASAR support (default in Electron, but explicit for clarity)
+      enableRemoteModule: false
     },
     icon: path.join(__dirname, 'assets', 'icon.png'),
     title: 'HisaabKitab',

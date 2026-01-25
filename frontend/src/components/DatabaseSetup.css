@@ -3,7 +3,7 @@
   justify-content: center;
   align-items: center;
   min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
   padding: 20px;
 }
 
@@ -59,7 +59,7 @@
 
 .spinner-large {
   border: 5px solid #f3f3f3;
-  border-top: 5px solid #667eea;
+  border-top: 5px solid #3b82f6;
   border-radius: 50%;
   width: 80px;
   height: 80px;
@@ -188,7 +188,7 @@
 .retry-button {
   margin-top: 15px;
   padding: 12px 24px;
-  background: #667eea;
+  background: #3b82f6;
   color: white;
   border: none;
   border-radius: 8px;
@@ -229,11 +229,11 @@
   padding: 20px;
   background: #f8f9fa;
   border-radius: 8px;
-  border-left: 4px solid #667eea;
+  border-left: 4px solid #3b82f6;
 }
 
 .step-number {
-  background: #667eea;
+  background: #3b82f6;
   color: white;
   width: 40px;
   height: 40px;
@@ -266,7 +266,7 @@
 .setup-button-primary {
   width: 100%;
   padding: 16px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
   color: white;
   border: none;
   border-radius: 8px;
@@ -355,7 +355,7 @@
   font-size: 13px;
   margin: 8px 0;
   overflow-x: auto;
-  border-left: 3px solid #667eea;
+  border-left: 3px solid #3b82f6;
 }
 
 .setup-footer {

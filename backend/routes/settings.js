@@ -1,9 +1,15 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../db');
+const { requireAuth, requireRole } = require('../middleware/authMiddleware');
+
+// Settings: Cashiers can read, only admins can write
+// GET route is accessible to both admins and cashiers
+// PUT route requires admin role (will be checked in the route handler)
 
 // Get settings - always return the first (and should be only) record
-router.get('/', async (req, res) => {
+// Accessible to both admins and cashiers
+router.get('/', requireAuth, async (req, res) => {
   try {
     // First, ensure only one record exists (cleanup any duplicates)
     await db.query(`
@@ -40,7 +46,8 @@ router.get('/', async (req, res) => {
 });
 
 // Update settings - ensure only one record exists
-router.put('/', async (req, res) => {
+// Admin only - cashiers cannot modify settings
+router.put('/', requireAuth, requireRole('administrator'), async (req, res) => {
   try {
     console.log('[Settings API] ===== UPDATE REQUEST START =====');
     console.log('[Settings API] Request body:', JSON.stringify(req.body, null, 2));

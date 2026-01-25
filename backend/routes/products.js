@@ -1,6 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../db');
+const { requireAuth } = require('../middleware/authMiddleware');
+
+// All product routes require authentication (both admins and cashiers can view products)
+router.use(requireAuth);
 
 // Get all products with supplier name (for electric shop)
 router.get('/', async (req, res) => {

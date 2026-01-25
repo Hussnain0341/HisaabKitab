@@ -1,6 +1,13 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../db');
+const { requireAuth, requireRole } = require('../middleware/authMiddleware');
+
+// Categories: Cashiers can read, only admins can write
+router.use(requireAuth);
+
+// GET routes are accessible to both admins and cashiers
+// POST/PUT/DELETE routes require admin role (will be checked per route)
 
 // Ensure "General" category exists (helper function)
 async function ensureGeneralCategory() {
@@ -76,7 +83,8 @@ router.get('/:id', async (req, res) => {
 });
 
 // Create new category
-router.post('/', async (req, res) => {
+// Create category - Admin only
+router.post('/', requireRole('administrator'), async (req, res) => {
   try {
     const { category_name, status } = req.body;
 
@@ -110,7 +118,8 @@ router.post('/', async (req, res) => {
 });
 
 // Update category
-router.put('/:id', async (req, res) => {
+// Update category - Admin only
+router.put('/:id', requireRole('administrator'), async (req, res) => {
   try {
     const { id } = req.params;
     const { category_name, status } = req.body;
@@ -164,7 +173,8 @@ router.put('/:id', async (req, res) => {
 });
 
 // Delete category (only if no products use it, and not General)
-router.delete('/:id', async (req, res) => {
+// Delete category - Admin only
+router.delete('/:id', requireRole('administrator'), async (req, res) => {
   try {
     const { id } = req.params;
     
@@ -252,7 +262,8 @@ router.get('/sub-categories/all', async (req, res) => {
 });
 
 // Create sub-category
-router.post('/sub-categories', async (req, res) => {
+// Create sub-category - Admin only
+router.post('/sub-categories', requireRole('administrator'), async (req, res) => {
   try {
     const { category_id, sub_category_name, status } = req.body;
 
@@ -285,7 +296,8 @@ router.post('/sub-categories', async (req, res) => {
 });
 
 // Update sub-category
-router.put('/sub-categories/:id', async (req, res) => {
+// Update sub-category - Admin only
+router.put('/sub-categories/:id', requireRole('administrator'), async (req, res) => {
   try {
     const { id } = req.params;
     const { sub_category_name, status } = req.body;
@@ -317,7 +329,8 @@ router.put('/sub-categories/:id', async (req, res) => {
 });
 
 // Delete sub-category
-router.delete('/sub-categories/:id', async (req, res) => {
+// Delete sub-category - Admin only
+router.delete('/sub-categories/:id', requireRole('administrator'), async (req, res) => {
   try {
     const { id } = req.params;
     

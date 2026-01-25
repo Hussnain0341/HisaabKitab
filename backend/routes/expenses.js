@@ -1,6 +1,11 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../db');
+const { requireAuth, requireRole } = require('../middleware/authMiddleware');
+
+// Expenses management is admin-only (cashiers cannot manage expenses)
+router.use(requireAuth);
+router.use(requireRole('administrator'));
 
 // Get all expenses with optional date filter
 router.get('/', async (req, res) => {
