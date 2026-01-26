@@ -1,254 +1,557 @@
-# HisaabKitab
+# HisaabKitab - POS & Inventory Management System
 
-**Desktop-first, offline POS and inventory software for small Pakistani hardware and equipment shops.**
+**HisaabKitab** (حساب کتاب) is a comprehensive, desktop-first Point of Sale (POS) and inventory management system designed specifically for small to medium-sized hardware shops in Pakistan. Built with Electron, React, and Node.js, it provides a complete offline-capable solution for managing sales, inventory, customers, suppliers, and financial operations.
 
-HisaabKitab helps shop owners manage inventory, billing, suppliers, price changes, profit/loss, and reports. Built with Electron, React, Node.js, and PostgreSQL for a seamless offline experience.
+## 📋 Table of Contents
 
-## Features
+- [Features](#features)
+- [Tech Stack](#tech-stack)
+- [Architecture](#architecture)
+- [Installation](#installation)
+- [Configuration](#configuration)
+- [Usage](#usage)
+- [API Documentation](#api-documentation)
+- [Database Schema](#database-schema)
+- [Development](#development)
+- [Building & Distribution](#building--distribution)
+- [License System](#license-system)
+- [Security & Authentication](#security--authentication)
+- [Troubleshooting](#troubleshooting)
 
-- 📦 **Inventory Management** - Track products, stock levels, and categories
-- 🧾 **Billing System** - Create bills and process sales
-- 👥 **Supplier Management** - Manage suppliers and purchase orders
-- 📈 **Reports & Analytics** - Sales reports, profit/loss statements
-- ⚙️ **Settings & Backup** - Configure shop details and backup data
-- 💾 **Automatic Backup System** - Scheduled backups, retention policy, one-click restore
-- 🌐 **Multi-language Support** - English (default) and Urdu
-- 💾 **Offline First** - Works completely offline, no internet required
-- 🖥️ **Desktop Optimized** - Designed for 1366x768 resolution
+## ✨ Features
 
-## Tech Stack
+### Core Functionality
 
-- **Frontend**: React 18, React Router, i18next
-- **Backend**: Node.js, Express
-- **Database**: PostgreSQL (local)
-- **Desktop**: Electron
-- **Styling**: CSS3 with responsive design
+- **📊 Dashboard**: Real-time business metrics including today's sales, profit, cash in hand, customer/supplier dues, and low stock alerts
+- **🧾 Billing & Sales**: Complete POS system with invoice generation, multiple payment types (cash, credit, split), discount and tax support
+- **📦 Inventory Management**: Product management with categories, sub-categories, stock tracking, frequently sold items, and low stock alerts
+- **👥 Customer Management**: Customer profiles, credit tracking (Udhaar), payment history, and outstanding balance management
+- **🏪 Supplier Management**: Supplier profiles, purchase tracking, payment management, and payable tracking
+- **💰 Financial Operations**:
+  - Sales transactions with detailed reporting
+  - Purchase management
+  - Expense tracking
+  - Customer payments (credit recovery)
+  - Supplier payments
+  - Profit/loss calculations
 
-## Project Structure
+### Advanced Features
+
+- **🌐 Multi-language Support**: Full bilingual interface (English/Urdu) with i18n
+- **🔐 Role-Based Access Control**: Administrator and Cashier roles with granular permissions
+- **📱 Real-time Notifications**: System notifications for important events
+- **📈 Comprehensive Reports**: 
+  - Sales reports (daily, weekly, monthly, custom date ranges)
+  - Profit reports
+  - Stock reports
+  - Customer statements
+  - Supplier history
+  - Expense summaries
+- **💾 Backup & Restore**: Automated and manual database backups with restore functionality
+- **🖨️ Invoice Printing**: Thermal printer support for invoice printing
+- **📋 Rate List**: Product pricing management and rate list generation
+- **🔒 License Management**: Online license validation and activation system
+- **⚙️ Settings Management**: Shop information, language, printer configuration, and more
+
+## 🛠 Tech Stack
+
+### Frontend
+- **React 18.2.0**: UI framework
+- **React Router 6.20.0**: Client-side routing
+- **React i18next**: Internationalization (English/Urdu)
+- **Axios**: HTTP client for API communication
+- **CSS3**: Custom styling with modern UI/UX
+
+### Backend
+- **Node.js**: Runtime environment
+- **Express 4.18.2**: Web framework
+- **PostgreSQL**: Relational database
+- **bcrypt**: Password hashing
+- **UUID**: Session and ID generation
+- **node-cron**: Scheduled tasks (backups)
+
+### Desktop Application
+- **Electron 28.0.0**: Desktop app framework
+- **electron-builder**: Application packaging and distribution
+
+### Key Dependencies
+- **pg (PostgreSQL)**: Database driver
+- **express-session**: Session management
+- **cors**: Cross-origin resource sharing
+- **dotenv**: Environment variable management
+
+## 🏗 Architecture
+
+### Project Structure
 
 ```
 HisaabKitab/
-├── frontend/          # React frontend application
-│   ├── public/       # Static assets
-│   ├── src/          # React source code
-│   │   ├── components/  # React components
-│   │   ├── locales/     # i18n translation files
-│   │   └── ...
-│   └── package.json
-├── backend/          # Node.js backend API
-│   ├── routes/      # API routes (to be added)
-│   ├── db.js        # Database connection
-│   ├── server.js    # Express server
-│   └── package.json
-├── database/        # PostgreSQL scripts
-│   ├── create_database.sql
-│   └── init.sql
-├── assets/          # Images, icons, logo
-├── main.js          # Electron main process
-├── preload.js       # Electron preload script
-└── package.json     # Root package.json
+├── frontend/                 # React frontend application
+│   ├── src/
+│   │   ├── components/      # React components (34 components)
+│   │   ├── contexts/        # React contexts (Auth, License)
+│   │   ├── services/        # API service layer
+│   │   ├── locales/         # Translation files (en.json, ur.json)
+│   │   └── utils/           # Utility functions
+│   └── public/              # Static assets
+├── backend/                 # Node.js/Express backend
+│   ├── routes/              # API route handlers (18 routes)
+│   ├── middleware/          # Express middleware (auth, license)
+│   ├── utils/               # Utility modules
+│   └── server.js            # Express server entry point
+├── database/                # Database scripts and migrations
+├── main.js                  # Electron main process
+├── preload.js               # Electron preload script
+└── package.json             # Root package configuration
 ```
 
-## Prerequisites
+### Application Flow
 
-Before you begin, ensure you have the following installed:
+1. **Electron Main Process** (`main.js`): Launches the desktop application
+2. **Backend Server** (`backend/server.js`): Starts Express API server on port 5000
+3. **React Frontend**: Serves UI on port 3000 (dev) or from build (production)
+4. **Database**: PostgreSQL database for data persistence
+5. **Communication**: Frontend communicates with backend via REST API
 
-- **Node.js** (v18 or higher)
-- **PostgreSQL** (v14 or higher)
-- **npm** or **yarn**
+### Key Components
 
-## Installation
+#### Frontend Components (34 total)
+- **Dashboard**: Business overview and metrics
+- **Billing**: POS interface for creating sales
+- **Inventory**: Product management
+- **Sales**: Sales transaction history and management
+- **Customers**: Customer management and credit tracking
+- **Suppliers**: Supplier management
+- **Purchases**: Purchase order management
+- **Expenses**: Daily expense tracking
+- **Reports**: Comprehensive reporting system
+- **Settings**: Application configuration
+- **Users**: User management (Admin only)
+- **Categories**: Product category management
+- **RateList**: Product pricing management
+- **Notifications**: Real-time notification system
 
-### 1. Clone the repository
+#### Backend Routes (18 total)
+- `/api/auth`: Authentication (login, logout, password management)
+- `/api/products`: Product CRUD operations
+- `/api/sales`: Sales transactions
+- `/api/customers`: Customer management
+- `/api/suppliers`: Supplier management
+- `/api/purchases`: Purchase management
+- `/api/expenses`: Expense tracking
+- `/api/reports`: Reporting endpoints
+- `/api/categories`: Category management
+- `/api/users`: User management
+- `/api/settings`: Application settings
+- `/api/notifications`: Notification system
+- `/api/backup`: Backup and restore operations
+- `/api/license`: License validation
+
+## 🚀 Installation
+
+### Prerequisites
+
+- **Node.js**: v16+ (recommended: v18+)
+- **PostgreSQL**: v12+ (recommended: v14+)
+- **npm**: v8+ or **yarn**
+- **Windows**: 10/11 (for building Windows installer)
+
+### Step 1: Clone Repository
 
 ```bash
 git clone <repository-url>
 cd HisaabKitab
 ```
 
-### 2. Install dependencies
-
-Install all dependencies for root, frontend, and backend:
+### Step 2: Install Dependencies
 
 ```bash
+# Install all dependencies (root, frontend, backend)
 npm run install:all
 ```
 
 Or manually:
-
 ```bash
 npm install
-cd frontend && npm install && cd ..
-cd backend && npm install && cd ..
+cd frontend && npm install
+cd ../backend && npm install
 ```
 
-### 3. Set up PostgreSQL Database
+### Step 3: Database Setup
 
-1. **Install PostgreSQL** if not already installed
-2. **Create the database**:
-
-```bash
-# Connect to PostgreSQL as superuser
-psql -U postgres
-
-# Run the create database script
-\i database/create_database.sql
-
-# Connect to the new database
-\c hisaabkitab
-
-# Run the initialization script
-\i database/init.sql
-```
-
-Alternatively, you can create the database manually:
-
+1. **Create PostgreSQL Database**:
 ```sql
 CREATE DATABASE hisaabkitab;
 ```
 
-Then connect to `hisaabkitab` and run `init.sql`.
-
-### 4. Configure Environment Variables
-
-Create a `.env` file in the `backend/` directory:
-
-```bash
-cd backend
-cp .env.example .env
-```
-
-Edit `.env` with your PostgreSQL credentials:
-
-```
+2. **Configure Environment Variables**:
+Create `backend/.env`:
+```env
 DB_HOST=localhost
 DB_PORT=5432
 DB_NAME=hisaabkitab
 DB_USER=postgres
 DB_PASSWORD=your_password
 PORT=5000
-NODE_ENV=development
+HOST=0.0.0.0
 ```
 
-### 5. Start the Application
+3. **Initialize Database**:
+```bash
+npm run setup:db
+```
+
+Or manually:
+```bash
+node database/setup.js
+```
+
+### Step 4: Run Application
 
 #### Development Mode
-
 ```bash
 npm run dev
 ```
 
-This will start:
-- React development server (http://localhost:3000)
-- Electron desktop window
-- Backend API server (http://localhost:5000)
+This starts:
+- Backend server on `http://localhost:5000`
+- React dev server on `http://localhost:3000`
+- Electron app window
 
 #### Production Mode
-
 ```bash
 # Build React app
-npm run build
+npm run build:react
+
+# Start backend
+cd backend && npm start
 
 # Start Electron
 npm start
 ```
 
-## Usage
+## ⚙️ Configuration
 
-1. Launch the application using `npm run dev` or `npm start`
-2. The desktop window will open with the HisaabKitab interface
-3. Use the sidebar menu to navigate between:
-   - **Dashboard** - Overview of shop performance
-   - **Inventory** - Manage products and stock
-   - **Billing** - Create bills and process sales
-   - **Suppliers** - Manage suppliers
-   - **Reports** - View sales and analytics
-   - **Settings** - Configure shop settings and backup
+### Environment Variables
 
-## Backup System
+#### Backend (`backend/.env`)
+```env
+# Database Configuration
+DB_HOST=localhost
+DB_PORT=5432
+DB_NAME=hisaabkitab
+DB_USER=postgres
+DB_PASSWORD=your_password
 
-HisaabKitab includes a comprehensive automatic backup system:
+# Server Configuration
+PORT=5000
+HOST=0.0.0.0
 
-- **Automatic Backups** - Configure backups to run on app start or at scheduled times
-- **Manual Backups** - Create backups on-demand with one click
-- **Retention Policy** - Automatically delete old backups (keep last 3/5/7/10)
-- **One-Click Restore** - Restore your database from the last backup
-- **Transaction Safety** - All critical operations use database transactions to prevent data loss
+# License Server (Optional)
+LICENSE_SERVER_URL=https://api.zentryasolutions.com
+LICENSE_API_KEY=your_api_key
 
-### Testing Backup Functionality
+# Read-Only Mode (for client PCs)
+READ_ONLY_MODE=false
+```
 
-See **[BACKUP_TESTING_GUIDE.md](./BACKUP_TESTING_GUIDE.md)** for detailed testing instructions.
+### Application Settings
 
-**Quick Test:**
-1. Go to Settings → Data Safety & Backup
-2. Click "💾 Create Manual Backup"
-3. Verify backup file is created in `/backup` directory
-4. Test restore functionality (⚠️ will replace current database)
+Accessible via Settings menu in the application:
+- **Shop Information**: Name, address, phone
+- **Language**: English/Urdu
+- **Printer Configuration**: Thermal printer setup
+- **Backup Settings**: Automated backup configuration
+- **License Activation**: Online license validation
 
-## Development
+## 📖 Usage
 
-### Project Status
+### First-Time Setup
 
-This is **Step 1** of the development process:
-- ✅ Project setup and basic architecture
-- ✅ UI shell with navigation
-- ✅ Database schema setup
-- ⏳ API endpoints (to be implemented)
-- ⏳ Full feature implementation (to be implemented)
+1. Launch the application
+2. Complete first-time setup wizard:
+   - Database connection configuration
+   - Create administrator account
+   - Set security questions
+3. Activate license (if required)
+4. Configure shop information in Settings
 
-### Next Steps
+### User Roles
 
-1. Database setup and connection testing
-2. Inventory management screens
-3. Billing logic implementation
-4. Reports functionality
-5. Printing capabilities
-6. Settings and backup features
+#### Administrator
+- Full access to all features
+- User management
+- Settings configuration
+- Reports access
+- Can edit/delete sales
+- License management
 
-## Building for Production
+#### Cashier
+- Access to Dashboard, Billing, Sales (view), Products, Customers, Rate List
+- Can create sales and view details
+- Cannot edit/delete sales
+- Cannot access Reports, Suppliers, Categories, Users, Settings (edit)
 
-To create a distributable desktop application:
+### Key Workflows
 
+#### Creating a Sale
+1. Navigate to **Billing** or click "New Sale"
+2. Add products to cart
+3. Select customer (optional)
+4. Apply discount/tax if needed
+5. Choose payment type (Cash/Credit/Split)
+6. Complete sale
+7. Print invoice (optional)
+
+#### Managing Inventory
+1. Go to **Products** (Inventory)
+2. Add new product or edit existing
+3. Set purchase price, selling price, stock quantity
+4. Assign category and supplier
+5. Mark as "frequently sold" for quick access
+
+#### Managing Customers
+1. Navigate to **Customers**
+2. Add customer with contact information
+3. View customer history and outstanding balance
+4. Record payments for credit recovery
+
+#### Generating Reports
+1. Go to **Reports**
+2. Select report type (Sales, Profit, Stock, etc.)
+3. Choose date range
+4. View and export data
+
+## 📡 API Documentation
+
+### Authentication
+
+All API routes (except `/api/health` and `/api/license/validate`) require authentication via session.
+
+#### Login
+```http
+POST /api/auth/login
+Content-Type: application/json
+
+{
+  "username": "admin",
+  "password": "password"
+}
+```
+
+#### Logout
+```http
+POST /api/auth/logout
+```
+
+### Core Endpoints
+
+#### Products
+- `GET /api/products` - Get all products
+- `POST /api/products` - Create product
+- `PUT /api/products/:id` - Update product
+- `DELETE /api/products/:id` - Delete product
+
+#### Sales
+- `GET /api/sales` - Get all sales
+- `POST /api/sales` - Create sale
+- `GET /api/sales/:id` - Get sale details
+- `PUT /api/sales/:id` - Update sale (Admin only)
+- `DELETE /api/sales/:id` - Delete sale (Admin only)
+
+#### Customers
+- `GET /api/customers` - Get all customers
+- `POST /api/customers` - Create customer
+- `PUT /api/customers/:id` - Update customer
+- `GET /api/customers/:id` - Get customer details
+- `POST /api/customers/:id/payments` - Record customer payment
+
+#### Reports
+- `GET /api/reports/dashboard` - Dashboard data
+- `GET /api/reports/sales-summary` - Sales summary
+- `GET /api/reports/profit` - Profit report
+- `GET /api/reports/stock-current` - Current stock
+- `GET /api/reports/customers-due` - Customer outstanding
+
+### Response Format
+
+```json
+{
+  "success": true,
+  "data": { ... },
+  "error": null
+}
+```
+
+Error Response:
+```json
+{
+  "error": "Error message",
+  "message": "Detailed error description"
+}
+```
+
+## 🗄 Database Schema
+
+### Core Tables
+
+- **users**: User accounts and authentication
+- **products**: Product catalog
+- **categories**: Product categories
+- **customers**: Customer information
+- **suppliers**: Supplier information
+- **sales**: Sales transactions
+- **sale_items**: Individual items in sales
+- **purchases**: Purchase orders
+- **purchase_items**: Items in purchases
+- **expenses**: Daily expenses
+- **customer_payments**: Customer payment records
+- **supplier_payments**: Supplier payment records
+- **notifications**: System notifications
+- **user_sessions**: Active user sessions
+- **audit_logs**: Security audit trail
+- **settings**: Application settings
+
+### Key Relationships
+
+- Sales → Sale Items → Products
+- Sales → Customers (optional)
+- Purchases → Purchase Items → Products
+- Purchases → Suppliers
+- Products → Categories
+- Products → Suppliers
+
+## 💻 Development
+
+### Development Scripts
+
+```bash
+# Start all services in development mode
+npm run dev
+
+# Start backend only
+npm run dev:backend
+
+# Start frontend only
+npm run dev:react
+
+# Start Electron only
+npm run dev:electron
+```
+
+### Code Structure
+
+- **Frontend**: Component-based architecture with React hooks
+- **Backend**: RESTful API with Express routes
+- **State Management**: React Context API (Auth, License)
+- **Styling**: CSS modules with component-specific styles
+- **Internationalization**: i18next with JSON translation files
+
+### Adding New Features
+
+1. **New Component**: Create in `frontend/src/components/`
+2. **New Route**: Add to `backend/routes/`
+3. **New API Endpoint**: Add to appropriate route file
+4. **Translation**: Add keys to `frontend/src/locales/en.json` and `ur.json`
+
+## 📦 Building & Distribution
+
+### Build React App
+```bash
+npm run build:react
+```
+
+### Build Electron App
+```bash
+npm run build:electron
+```
+
+### Build Complete Application
 ```bash
 npm run build
 ```
 
-This will create a build in the `dist/` directory.
+### Build Signed Installer (Windows)
+```bash
+npm run build:signed
+```
 
-## Offline Support
+### Output
+- Windows installer: `dist/HisaabKitab Setup 1.0.0.exe`
+- Application files: `dist/win-unpacked/`
 
-HisaabKitab is designed to work completely offline. All data is stored locally in PostgreSQL, and the application runs as a standalone desktop app with no internet dependency.
+## 🔐 License System
 
-## Multi-language Support
+HisaabKitab includes an online license validation system:
 
-The application supports multiple languages:
-- **English** (default)
-- **Urdu** (available)
+- **License Server**: Validates licenses against remote server
+- **Device Fingerprinting**: Unique device identification
+- **Activation**: One-time activation per device
+- **Validation**: Periodic license status checks
+- **Revocation**: Server can revoke licenses remotely
 
-Language can be changed in Settings (to be implemented).
+### License Flow
 
-## Contributing
+1. User activates license with activation code
+2. System generates device fingerprint
+3. License validated against remote server
+4. License stored locally with expiration
+5. Periodic revalidation ensures license is still valid
 
-This is a work-in-progress project. Development is being done in structured steps.
+## 🔒 Security & Authentication
 
-## License
+### Authentication
+- **Session-based**: Express sessions with secure cookies
+- **Password Hashing**: bcrypt with salt rounds
+- **PIN Login**: 4-digit PIN support for cashiers
+- **Session Management**: 24-hour session expiration
 
-MIT License
+### Authorization
+- **Role-Based Access Control (RBAC)**: Administrator and Cashier roles
+- **Route Protection**: Middleware-based route guards
+- **Operation Guards**: Frontend and backend operation blocking
 
-## Support
+### Security Features
+- **Audit Logging**: All sensitive operations logged
+- **Password Recovery**: Security question-based recovery
+- **Read-Only Mode**: Client PCs can run in read-only mode
+- **Input Validation**: Server-side validation for all inputs
 
-For issues and questions, please refer to the project documentation or contact the development team.
+## 🐛 Troubleshooting
+
+### Database Connection Issues
+- Verify PostgreSQL is running
+- Check `.env` file configuration
+- Ensure database exists: `CREATE DATABASE hisaabkitab;`
+- Test connection: `psql -U postgres -d hisaabkitab`
+
+### Port Already in Use
+- Backend (5000): Change `PORT` in `backend/.env`
+- Frontend (3000): React will automatically use next available port
+
+### Build Issues
+- Clear node_modules: `rm -rf node_modules frontend/node_modules backend/node_modules`
+- Reinstall: `npm run install:all`
+- Clear cache: `npm cache clean --force`
+
+### License Issues
+- Check internet connection for license validation
+- Verify license server URL in settings
+- Check device fingerprint matches activation
+
+### Performance Issues
+- Database indexes may need optimization
+- Large datasets: Use pagination (already implemented)
+- Backup large databases before operations
+
+## 📝 License
+
+MIT License - See LICENSE file for details
+
+## 👥 Support
+
+For issues, questions, or contributions, please contact the development team.
 
 ---
 
-**Version**: 1.0.0  
-**Status**: In Development (Step 1 Complete)
-
-
-
-
-
-
-
-
-
+**HisaabKitab** - حساب کتاب - Your Complete POS & Inventory Solution

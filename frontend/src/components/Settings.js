@@ -549,22 +549,20 @@ const Settings = ({ readOnly = false }) => {
             >
               🖨️ {t('settings.printerConfiguration')}
             </button>
-            {isAdmin() && (
-              <button
-                className={`settings-tab ${activeTab === 'backup' ? 'active' : ''}`}
-                onClick={() => setActiveTab('backup')}
-              >
-                💾 {t('backup.title')}
-              </button>
-            )}
           </>
         )}
+        <button
+          className={`settings-tab ${activeTab === 'security' ? 'active' : ''}`}
+          onClick={() => setActiveTab('security')}
+        >
+          🔐 {t('settings.security')}
+        </button>
         {isAdmin() && (
           <button
-            className={`settings-tab ${activeTab === 'security' ? 'active' : ''}`}
-            onClick={() => setActiveTab('security')}
+            className={`settings-tab ${activeTab === 'backup' ? 'active' : ''}`}
+            onClick={() => setActiveTab('backup')}
           >
-            🔐 {t('settings.security')}
+            💾 {t('backup.title')}
           </button>
         )}
       </div>
@@ -721,7 +719,7 @@ const Settings = ({ readOnly = false }) => {
         )}
 
         {/* Printer Configuration Tab */}
-        {activeTab === 'printer' && !readOnly && isAdmin() && (
+        {activeTab === 'printer' && !readOnly && (
           <div className="card">
             <div className="card-header">
               <h2>{t('settings.printerConfiguration')}</h2>
@@ -733,7 +731,7 @@ const Settings = ({ readOnly = false }) => {
                   className="form-input"
                   value={selectedPrinter}
                   onChange={(e) => setSelectedPrinter(e.target.value)}
-                  disabled={readOnly || !isAdmin()}
+                  disabled={readOnly}
                 >
                   <option value="">-- {t('settings.selectPrinter')} --</option>
                   {printers.map((printer, index) => (
@@ -985,7 +983,7 @@ const Settings = ({ readOnly = false }) => {
         )}
 
         {/* Security Tab */}
-        {activeTab === 'security' && isAdmin() && (
+        {activeTab === 'security' && (
           <div className="card">
             <div className="card-header">
               <h2>🔐 {t('settings.security')}</h2>
@@ -1095,8 +1093,10 @@ const Settings = ({ readOnly = false }) => {
                   </div>
                 )}
               </div>
+              )}
 
-              {/* Audit Logs */}
+              {/* Audit Logs - Admin Only */}
+              {isAdmin() && (
               <div className="form-group">
                 <button
                   className="btn btn-secondary"
@@ -1137,6 +1137,7 @@ const Settings = ({ readOnly = false }) => {
                   </div>
                 )}
               </div>
+              )}
             </div>
           </div>
         )}

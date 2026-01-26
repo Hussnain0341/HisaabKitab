@@ -83,8 +83,8 @@ router.get('/:id', async (req, res) => {
 });
 
 // Create new category
-// Create category - Admin only
-router.post('/', requireRole('administrator'), async (req, res) => {
+// Create category - All authenticated users (admins and cashiers)
+router.post('/', async (req, res) => {
   try {
     const { category_name, status } = req.body;
 

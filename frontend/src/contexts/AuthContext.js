@@ -113,11 +113,28 @@ export const AuthProvider = ({ children }) => {
       console.error('[Auth] Logout error:', error);
       // Continue with logout even if API call fails
     } finally {
+      // CRITICAL: Re-enable all inputs before redirect to prevent stuck inputs
+      const allInputs = document.querySelectorAll('input, textarea, select');
+      allInputs.forEach(input => {
+        input.disabled = false;
+        input.readOnly = false;
+        input.removeAttribute('data-license-disabled');
+      });
+      
+      // Remove any disabling classes
+      const appElement = document.querySelector('.app');
+      if (appElement) {
+        appElement.classList.remove('operations-disabled');
+      }
+      
       localStorage.removeItem('sessionId');
       localStorage.removeItem('user');
       setUser(null);
-      // Force redirect to login
-      window.location.href = '/login';
+      
+      // Use setTimeout to ensure DOM updates complete before redirect
+      setTimeout(() => {
+        window.location.href = '/login';
+      }, 100);
     }
   };
 
@@ -137,24 +154,51 @@ export const AuthProvider = ({ children }) => {
     return hasRole('cashier');
   };
 
-  // Initialize auth on mount
+  // Initialize auth on mount (only once)
   useEffect(() => {
+    let isMounted = true;
+    let initialized = false;
+
     const initialize = async () => {
-      // First check if setup is needed
-      const needs = await checkSetup();
-      
-      if (needs) {
-        setLoading(false);
+      // Prevent multiple initializations
+      if (initialized) {
         return;
       }
+      initialized = true;
 
-      // Then check authentication
-      await checkAuth();
-      setLoading(false);
+      try {
+        // First check if setup is needed
+        const needs = await checkSetup();
+        
+        if (!isMounted) return;
+        
+        if (needs) {
+          setLoading(false);
+          return;
+        }
+
+        // Then check authentication
+        await checkAuth();
+        
+        if (isMounted) {
+          setLoading(false);
+        }
+      } catch (error) {
+        console.error('[Auth] Initialization error:', error);
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
     };
 
     initialize();
-  }, [checkSetup, checkAuth]);
+
+    return () => {
+      isMounted = false;
+    };
+    // CRITICAL: Empty dependency array - only run once on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const value = {
     user,

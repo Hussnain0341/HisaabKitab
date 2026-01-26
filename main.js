@@ -5,57 +5,121 @@ const { spawn } = require('child_process');
 let mainWindow;
 let backendProcess;
 
-// Start backend Express server using the actual backend/server.js
-// Note: In development, you may want to start backend manually to avoid conflicts
-function startBackend() {
-  const backendPath = path.join(__dirname, 'backend', 'server.js');
-  const isDev = process.env.NODE_ENV === 'development';
-  
-  // Check if backend is already running by testing the health endpoint
-  const http = require('http');
-  const healthCheck = http.get('http://localhost:5000/api/health', (res) => {
-    res.on('data', () => {});
-    res.on('end', () => {
-      console.log('[Backend] Backend server is already running on port 5000');
-      console.log('[Backend] Using existing backend server (started manually)');
-    });
-  }).on('error', (err) => {
-    // Backend not running, start it
-    console.log('[Backend] Starting backend server...');
-    
-    backendProcess = spawn('node', [backendPath], {
-      cwd: path.join(__dirname, 'backend'),
-      env: { ...process.env, NODE_ENV: isDev ? 'development' : 'production' },
-      stdio: ['ignore', 'pipe', 'pipe']
-    });
+// Wait for backend to be ready by polling health endpoint
+function waitForBackend(maxRetries = 30, retryDelay = 1000) {
+  return new Promise((resolve, reject) => {
+    const http = require('http');
+    let attempts = 0;
 
-    // Pipe backend output to Electron console
-    backendProcess.stdout.on('data', (data) => {
-      console.log(`[Backend] ${data.toString().trim()}`);
-    });
+    const checkHealth = () => {
+      attempts++;
+      // Use 127.0.0.1 explicitly to avoid IPv6 issues
+      const req = http.get('http://127.0.0.1:5000/api/health', (res) => {
+        let data = '';
+        res.on('data', (chunk) => { data += chunk; });
+        res.on('end', () => {
+          if (res.statusCode === 200) {
+            console.log('[Electron] ✅ Backend server is ready');
+            resolve(true);
+          } else {
+            if (attempts < maxRetries) {
+              setTimeout(checkHealth, retryDelay);
+            } else {
+              reject(new Error('Backend health check failed after maximum retries'));
+            }
+          }
+        });
+      });
 
-    backendProcess.stderr.on('data', (data) => {
-      console.error(`[Backend Error] ${data.toString().trim()}`);
-    });
+      req.on('error', (err) => {
+        if (attempts < maxRetries) {
+          console.log(`[Electron] Waiting for backend... (attempt ${attempts}/${maxRetries})`);
+          setTimeout(checkHealth, retryDelay);
+        } else {
+          reject(new Error(`Backend not responding after ${maxRetries} attempts: ${err.message}`));
+        }
+      });
 
-    backendProcess.on('error', (error) => {
-      console.error('Failed to start backend server:', error);
-      console.error('Make sure you have run: npm install in the backend folder');
-      console.error('\n💡 TIP: You can also start backend manually: cd backend && node server.js');
-    });
+      req.setTimeout(2000, () => {
+        req.destroy();
+        if (attempts < maxRetries) {
+          setTimeout(checkHealth, retryDelay);
+        } else {
+          reject(new Error('Backend health check timeout after maximum retries'));
+        }
+      });
+    };
 
-    backendProcess.on('exit', (code) => {
-      if (code !== null && code !== 0) {
-        console.error(`Backend server exited with code ${code}`);
-      }
-    });
+    checkHealth();
   });
-  
-  // Set timeout for health check
-  healthCheck.setTimeout(1000, () => {
-    healthCheck.destroy();
-    // Timeout means backend not running, but we'll let spawn handle it
-    console.log('[Backend] Health check timeout - backend may not be running yet');
+}
+
+// Start backend Express server using the actual backend/server.js
+// Returns a promise that resolves when backend is ready
+function startBackend() {
+  return new Promise((resolve, reject) => {
+    const backendPath = path.join(__dirname, 'backend', 'server.js');
+    const isDev = process.env.NODE_ENV === 'development';
+    const http = require('http');
+    
+    // Check if backend is already running by testing the health endpoint
+    // Use 127.0.0.1 explicitly to avoid IPv6 issues
+    const healthCheck = http.get('http://127.0.0.1:5000/api/health', (res) => {
+      res.on('data', () => {});
+      res.on('end', () => {
+        console.log('[Backend] Backend server is already running on port 5000');
+        console.log('[Backend] Using existing backend server (started manually)');
+        resolve(true);
+      });
+    }).on('error', (err) => {
+      // Backend not running, start it
+      console.log('[Backend] Starting backend server...');
+      
+      backendProcess = spawn('node', [backendPath], {
+        cwd: path.join(__dirname, 'backend'),
+        env: { ...process.env, NODE_ENV: isDev ? 'development' : 'production' },
+        stdio: ['ignore', 'pipe', 'pipe']
+      });
+
+      // Pipe backend output to Electron console
+      backendProcess.stdout.on('data', (data) => {
+        console.log(`[Backend] ${data.toString().trim()}`);
+      });
+
+      backendProcess.stderr.on('data', (data) => {
+        console.error(`[Backend Error] ${data.toString().trim()}`);
+      });
+
+      backendProcess.on('error', (error) => {
+        console.error('Failed to start backend server:', error);
+        console.error('Make sure you have run: npm install in the backend folder');
+        console.error('\n💡 TIP: You can also start backend manually: cd backend && node server.js');
+        reject(error);
+      });
+
+      backendProcess.on('exit', (code) => {
+        if (code !== null && code !== 0) {
+          console.error(`Backend server exited with code ${code}`);
+          reject(new Error(`Backend server exited with code ${code}`));
+        }
+      });
+
+      // Wait for backend to be ready (with retries)
+      setTimeout(() => {
+        waitForBackend(30, 1000)
+          .then(() => resolve(true))
+          .catch((err) => {
+            console.error('[Electron] ⚠️ Backend not ready, but continuing anyway:', err.message);
+            // Still resolve to allow app to start (backend might be slow)
+            resolve(false);
+          });
+      }, 2000); // Give backend 2 seconds to start before checking
+    });
+    
+    // Set timeout for initial health check
+    healthCheck.setTimeout(2000, () => {
+      healthCheck.destroy();
+    });
   });
 }
 
@@ -229,18 +293,26 @@ ipcMain.handle('select-directory', async () => {
   }
 });
 
-app.whenReady().then(() => {
-  // Start backend server
-  startBackend();
-  
-  // Create main window
-  createWindow();
+app.whenReady().then(async () => {
+  try {
+    // Start backend server and wait for it to be ready
+    console.log('[Electron] Starting backend server...');
+    await startBackend();
+    console.log('[Electron] Backend server is ready, creating window...');
+    
+    // Create main window after backend is ready
+    createWindow();
 
-  app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) {
-      createWindow();
-    }
-  });
+    app.on('activate', () => {
+      if (BrowserWindow.getAllWindows().length === 0) {
+        createWindow();
+      }
+    });
+  } catch (error) {
+    console.error('[Electron] ❌ Failed to start application:', error);
+    // Still create window to show error to user
+    createWindow();
+  }
 });
 
 app.on('window-all-closed', () => {

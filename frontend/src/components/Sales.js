@@ -408,12 +408,6 @@ const Sales = ({ readOnly = false }) => {
                               </button>
                             </>
                           )}
-                          <button
-                            className="btn-print"
-                            onClick={() => handlePrintInvoice(sale)}
-                          >
-                            {t('sales.print')}
-                          </button>
                         </div>
                       </td>
                     </tr>

@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict RZANX3DItvuMg9uFlPWvO4SJOFYqgwyQuzGKM5DTa6l3FQSrp5hYogaXHLB3Goa
+\restrict EHwJ1WlbTfO9TZrMgDMhfPGACRmQ9LQEDKVQgjNhXfuMHH8JYsHBCkzBXH5jZiN
 
 -- Dumped from database version 15.15
 -- Dumped by pg_dump version 15.15
@@ -1421,6 +1421,7 @@ COPY public.audit_logs (log_id, user_id, action, table_name, record_id, old_valu
 38	1	logout	\N	\N	\N	\N	127.0.0.1	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) hisaabkitab/1.0.0 Chrome/120.0.6099.291 Electron/28.3.3 Safari/537.36	2026-01-26 01:40:04.693023	User logged out
 39	2	password_recovery_requested	\N	\N	\N	\N	127.0.0.1	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) hisaabkitab/1.0.0 Chrome/120.0.6099.291 Electron/28.3.3 Safari/537.36	2026-01-26 01:48:12.10517	Password recovery key generated
 40	2	login	\N	\N	\N	\N	127.0.0.1	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) hisaabkitab/1.0.0 Chrome/120.0.6099.291 Electron/28.3.3 Safari/537.36	2026-01-26 01:48:46.565212	User logged in successfully
+41	2	logout	\N	\N	\N	\N	127.0.0.1	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) hisaabkitab/1.0.0 Chrome/120.0.6099.291 Electron/28.3.3 Safari/537.36	2026-01-26 02:37:05.449261	User logged out
 \.
 
 
@@ -1806,8 +1807,8 @@ COPY public.encryption_keys (key_id, key_name, encrypted_key, created_at, update
 --
 
 COPY public.license_info (id, license_id, tenant_id, license_key, device_id, device_fingerprint, expires_at, last_validated_at, validation_count, is_active, features, max_users, max_devices, app_version, created_at, updated_at, last_verified_at, pending_status, pending_status_count, activated_at, last_known_valid_date, tenant_name, status) FROM stdin;
-9	5e9fb087-6780-4d87-ba16-c20f95bd9c53	Muzammil Te	a31a15cccb147305ca3c198dc6bbec24:1422bdfb2402941c6bc2930bded2ed93dc40e70fd32c447a730277c0de534294	0488783f-03d3-4f49-9860-fcf6c1438271	1e3d9f54dffbca6939642dee537b39bb:de6e1f9598090d8ec58fec543f0fedcd02a4cfd51f49ed4edb0c2bd6fb5318a66757dd10097271ffb9ef6cac1cd266c6ff8f77b2bff526987fedf281c49e6df43ca5fc8cc43739ee9e5bac7b3c00b481	2026-01-26 00:00:00	2026-01-25 13:33:33.915023	2	f	{"reports": true, "maxDevices": 3, "profitLoss": true}	3	3	1.0.0	2026-01-24 03:06:42.341592	2026-01-26 00:53:03.243497	2026-01-25 13:33:33.907016	\N	0	2026-01-24 03:06:42.341592	2026-01-25 00:00:00	\N	revoked
-10	ca5379f3-ee14-46cf-8248-01e68578ee7c	new browser tenant	d1e3fb330afb1cc892c1e76ed93a6472:7e3a62816161f29a4aeb9d4d31d222ee57090d9c818601802de2fe0ebdb12e20	0488783f-03d3-4f49-9860-fcf6c1438271	d6991a7e9948560d9a8940856bf4f44b:0f803715cbeed0429ff85d54d75d49c3b27cd689972e3f77dfd5620ca6c0edf812e9b00e43e728da24b2b53be78bff7153aebd88b07d193b120f7bb1ba41f2e13288cb293a77a4aa1618def5da1590ea	2026-01-27 00:00:00	2026-01-24 05:26:11.829131	1	t	{"reports": true, "maxDevices": 3, "profitLoss": true}	3	3	1.0.0	2026-01-24 05:18:57.119706	2026-01-26 00:53:03.870651	2026-01-24 05:26:11.819486	\N	0	2026-01-24 05:18:57.119706	2026-01-24 00:00:00	\N	\N
+9	5e9fb087-6780-4d87-ba16-c20f95bd9c53	Muzammil Te	a31a15cccb147305ca3c198dc6bbec24:1422bdfb2402941c6bc2930bded2ed93dc40e70fd32c447a730277c0de534294	0488783f-03d3-4f49-9860-fcf6c1438271	1e3d9f54dffbca6939642dee537b39bb:de6e1f9598090d8ec58fec543f0fedcd02a4cfd51f49ed4edb0c2bd6fb5318a66757dd10097271ffb9ef6cac1cd266c6ff8f77b2bff526987fedf281c49e6df43ca5fc8cc43739ee9e5bac7b3c00b481	2026-01-26 00:00:00	2026-01-26 02:05:36.559116	3	f	{"reports": true, "maxDevices": 3, "profitLoss": true}	3	3	1.0.0	2026-01-24 03:06:42.341592	2026-01-26 02:05:36.559116	2026-01-26 02:05:36.55385	\N	0	2026-01-24 03:06:42.341592	2026-01-26 00:00:00	\N	revoked
+10	ca5379f3-ee14-46cf-8248-01e68578ee7c	new browser tenant	d1e3fb330afb1cc892c1e76ed93a6472:7e3a62816161f29a4aeb9d4d31d222ee57090d9c818601802de2fe0ebdb12e20	0488783f-03d3-4f49-9860-fcf6c1438271	d6991a7e9948560d9a8940856bf4f44b:0f803715cbeed0429ff85d54d75d49c3b27cd689972e3f77dfd5620ca6c0edf812e9b00e43e728da24b2b53be78bff7153aebd88b07d193b120f7bb1ba41f2e13288cb293a77a4aa1618def5da1590ea	2026-01-27 00:00:00	2026-01-26 02:05:36.559116	2	t	{"reports": true, "maxDevices": 3, "profitLoss": true}	3	3	1.0.0	2026-01-24 05:18:57.119706	2026-01-26 02:05:36.559116	2026-01-26 02:05:36.55385	\N	0	2026-01-24 05:18:57.119706	2026-01-26 00:00:00	\N	\N
 \.
 
 
@@ -4377,7 +4378,6 @@ COPY public.suppliers (supplier_id, name, contact_number, total_purchased, total
 COPY public.user_sessions (session_id, user_id, device_id, ip_address, user_agent, created_at, expires_at, last_activity) FROM stdin;
 4c650a16-2c9e-4ce1-8185-3fb2ac997292	1	unknown	127.0.0.1	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) hisaabkitab/1.0.0 Chrome/120.0.6099.291 Electron/28.3.3 Safari/537.36	2026-01-25 17:22:36.735249	2026-01-26 17:22:36.733	2026-01-25 17:25:25.57017
 9d5c0f93-503c-4c38-9dc9-498ea31efab0	1	unknown	127.0.0.1	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) hisaabkitab/1.0.0 Chrome/120.0.6099.291 Electron/28.3.3 Safari/537.36	2026-01-25 14:35:40.74329	2026-01-26 14:35:40.742	2026-01-25 14:38:02.150494
-2f934d54-8598-4e6d-a8af-688942e99c52	2	unknown	127.0.0.1	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) hisaabkitab/1.0.0 Chrome/120.0.6099.291 Electron/28.3.3 Safari/537.36	2026-01-26 01:48:46.561942	2026-01-27 01:48:46.561	2026-01-26 02:02:54.736751
 a45d29f9-c221-4e0d-8dc9-c974d15c408c	1	unknown	127.0.0.1	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) hisaabkitab/1.0.0 Chrome/120.0.6099.291 Electron/28.3.3 Safari/537.36	2026-01-25 17:15:28.715005	2026-01-26 17:15:28.713	2026-01-25 17:18:32.794272
 6ba619ab-58b9-4657-aae2-e6d71e5e3dd4	1	unknown	127.0.0.1	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) hisaabkitab/1.0.0 Chrome/120.0.6099.291 Electron/28.3.3 Safari/537.36	2026-01-25 17:18:42.772413	2026-01-26 17:18:42.771	2026-01-25 17:20:20.597138
 1856fa4a-cc40-4935-b38f-e18eeacc7a04	1	unknown	127.0.0.1	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) hisaabkitab/1.0.0 Chrome/120.0.6099.291 Electron/28.3.3 Safari/537.36	2026-01-25 17:20:30.449117	2026-01-26 17:20:30.448	2026-01-25 17:22:29.012144
@@ -4398,7 +4398,7 @@ COPY public.users (user_id, username, password_hash, name, role, pin_hash, is_ac
 -- Name: audit_logs_log_id_seq; Type: SEQUENCE SET; Schema: public; Owner: -
 --
 
-SELECT pg_catalog.setval('public.audit_logs_log_id_seq', 40, true);
+SELECT pg_catalog.setval('public.audit_logs_log_id_seq', 41, true);
 
 
 --
@@ -5298,5 +5298,5 @@ ALTER TABLE ONLY public.user_sessions
 -- PostgreSQL database dump complete
 --
 
-\unrestrict RZANX3DItvuMg9uFlPWvO4SJOFYqgwyQuzGKM5DTa6l3FQSrp5hYogaXHLB3Goa
+\unrestrict EHwJ1WlbTfO9TZrMgDMhfPGACRmQ9LQEDKVQgjNhXfuMHH8JYsHBCkzBXH5jZiN
 

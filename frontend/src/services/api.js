@@ -26,14 +26,23 @@ api.interceptors.request.use((config) => {
 });
 
 // Add response interceptor to handle read-only errors
+// CRITICAL: Prevent infinite redirect loops
+let isRedirecting = false;
 api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
       // Session expired or unauthorized
-      localStorage.removeItem('sessionId');
-      localStorage.removeItem('user');
-      window.location.href = '/login';
+      // CRITICAL: Only redirect if not already redirecting and not already on login page
+      if (!isRedirecting && window.location.pathname !== '/login') {
+        isRedirecting = true;
+        localStorage.removeItem('sessionId');
+        localStorage.removeItem('user');
+        // Use setTimeout to prevent immediate redirect loops
+        setTimeout(() => {
+          window.location.href = '/login';
+        }, 100);
+      }
     }
     if (error.response?.data?.readOnly) {
       console.warn('Read-only mode: Operation blocked');

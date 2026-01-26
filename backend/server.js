@@ -47,27 +47,33 @@ const db = require('./db');
 // License middleware (must be loaded before routes)
 const licenseMiddleware = require('./middleware/licenseMiddleware');
 
-// Test database connection on startup (non-blocking)
-db.query('SELECT NOW() as current_time')
-  .then(() => {
-    console.log('✅ Database connection verified');
-    
+// Flag to track if database is ready
+let dbReady = false;
+
+// Test database connection on startup with retry logic
+(async () => {
+  console.log('[Backend] Testing database connection...');
+  dbReady = await db.testConnection(5, 2000); // 5 retries, 2 second delay
+  
+  if (dbReady) {
     // Initialize backup scheduler and perform startup backup
     const backupScheduler = require('./utils/backupScheduler');
     backupScheduler.initializeScheduler().then(() => {
       console.log('[Backup Scheduler] Scheduler initialized');
+    }).catch(err => {
+      console.error('[Backup Scheduler] Initialization error:', err);
     });
     
     // Perform startup backup if enabled (non-blocking)
     backupScheduler.performStartupBackup().catch(err => {
       console.error('[Backup Scheduler] Startup backup error:', err);
     });
-  })
-  .catch((err) => {
-    console.error('❌ Database connection failed:', err.message);
+  } else {
+    console.error('⚠️ Database connection failed. App will continue but database operations may fail.');
     console.error('Please check your .env file and ensure PostgreSQL is running');
     // CRITICAL: Don't crash - app can still open in read-only mode
-  });
+  }
+})();
 
 // Health check endpoint (no license check)
 app.get('/api/health', (req, res) => {
@@ -205,11 +211,34 @@ app.use((err, req, res, next) => {
   });
 });
 
-app.listen(PORT, HOST, () => {
-  console.log(`HisaabKitab Backend Server running on http://${HOST}:${PORT}`);
-  console.log(`Mode: ${readOnlyMode ? 'Read-Only (Client PC)' : 'Full Access (Server PC)'}`);
-  if (!readOnlyMode && HOST === '0.0.0.0') {
-    console.log(`\nLAN Access: Other PCs can connect using your local IP address`);
-    console.log(`To find your IP: Run 'ipconfig' on Windows or 'ifconfig' on Linux/Mac\n`);
+// Start server with database readiness check
+const startServer = async () => {
+  // Wait for database connection (with timeout)
+  const maxWaitTime = 10000; // 10 seconds max wait
+  const startTime = Date.now();
+  
+  while (!dbReady && (Date.now() - startTime) < maxWaitTime) {
+    console.log('[Backend] Waiting for database connection...');
+    await new Promise(resolve => setTimeout(resolve, 500));
   }
+  
+  if (!dbReady) {
+    console.warn('[Backend] ⚠️ Starting server without database connection. Some features may not work.');
+  }
+  
+  app.listen(PORT, HOST, () => {
+    console.log(`\n[Backend] ✅ HisaabKitab Backend Server running on http://${HOST}:${PORT}`);
+    console.log(`[Backend] Mode: ${readOnlyMode ? 'Read-Only (Client PC)' : 'Full Access (Server PC)'}`);
+    console.log(`[Backend] Database: ${dbReady ? '✅ Connected' : '❌ Not Connected'}`);
+    if (!readOnlyMode && HOST === '0.0.0.0') {
+      console.log(`[Backend] LAN Access: Other PCs can connect using your local IP address`);
+      console.log(`[Backend] To find your IP: Run 'ipconfig' on Windows or 'ifconfig' on Linux/Mac\n`);
+    }
+  });
+};
+
+// Start the server
+startServer().catch(err => {
+  console.error('[Backend] ❌ Failed to start server:', err);
+  process.exit(1);
 });

@@ -71,12 +71,22 @@ const Inventory = ({ readOnly = false }) => {
     try {
       setLoading(true);
       setError(null);
-      const [suppliersResponse, categoriesResponse] = await Promise.all([
-        suppliersAPI.getAll(),
-        categoriesAPI.getAll(),
-      ]);
       
-      const suppliersData = Array.isArray(suppliersResponse.data) ? suppliersResponse.data : [];
+      // CRITICAL: Suppliers API requires admin role, so catch and continue for cashiers
+      // Categories and Products should work for cashiers
+      let suppliersData = [];
+      try {
+        const suppliersResponse = await suppliersAPI.getAll();
+        suppliersData = Array.isArray(suppliersResponse.data) ? suppliersResponse.data : [];
+      } catch (supplierErr) {
+        // If suppliers API fails (e.g., access denied for cashier), continue without suppliers
+        console.warn('Suppliers API not accessible (may require admin role):', supplierErr.message);
+        suppliersData = [];
+      }
+      
+      // Fetch categories and products (both should work for cashiers)
+      const categoriesResponse = await categoriesAPI.getAll();
+      
       setSuppliers(suppliersData);
       setCategories(categoriesResponse.data || []);
       
@@ -85,6 +95,8 @@ const Inventory = ({ readOnly = false }) => {
       console.error('Error fetching data:', err);
       if (err.code === 'ECONNREFUSED' || err.message.includes('Network Error')) {
         setError('Cannot connect to backend server. Please ensure the backend is running on port 5000.');
+      } else if (err.response?.status === 403 || err.response?.data?.error === 'Access denied') {
+        setError(err.response?.data?.message || 'Access denied. Please contact administrator.');
       } else {
         setError(err.response?.data?.error || 'Failed to load inventory data. Please check the console for details.');
       }
@@ -116,6 +128,12 @@ const Inventory = ({ readOnly = false }) => {
       setProducts(productsData);
     } catch (err) {
       console.error('Error fetching products:', err);
+      // Check if it's an access denied error
+      if (err.response?.status === 403 || err.response?.data?.error === 'Access denied') {
+        setError(err.response?.data?.message || 'Access denied. Please contact administrator.');
+      } else {
+        setError(err.response?.data?.error || 'Failed to load products. Please check the console for details.');
+      }
       setProducts([]);
     }
   };

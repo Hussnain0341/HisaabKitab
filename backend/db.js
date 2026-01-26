@@ -12,7 +12,8 @@ const pool = new Pool({
   password: process.env.DB_PASSWORD || 'postgres',
   max: 20,
   idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 2000,
+  connectionTimeoutMillis: 10000, // Increased to 10 seconds for slower PostgreSQL startups
+  retryDelayMs: 1000, // Wait 1 second between retries
 });
 
 // Test database connection
@@ -30,18 +31,55 @@ pool.on('error', (err) => {
   // Don't exit - let the app continue and show errors
 });
 
-// Query helper function
-const query = async (text, params) => {
+// Query helper function with retry logic
+// CRITICAL: Reduced logging to prevent console spam
+const query = async (text, params, retries = 3) => {
   const start = Date.now();
-  try {
-    const res = await pool.query(text, params);
-    const duration = Date.now() - start;
-    console.log('Executed query', { text, duration, rows: res.rowCount });
-    return res;
-  } catch (error) {
-    console.error('Database query error:', error);
-    throw error;
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      const res = await pool.query(text, params);
+      const duration = Date.now() - start;
+      // Only log slow queries or errors (reduce console spam)
+      if (duration > 1000 || attempt > 1) {
+        if (attempt > 1) {
+          console.log(`✅ Database query succeeded on attempt ${attempt}`);
+        }
+        // Only log query text for slow queries or errors
+        const queryPreview = text.length > 100 ? text.substring(0, 100) + '...' : text;
+        console.log('Executed query', { text: queryPreview, duration, rows: res.rowCount });
+      }
+      return res;
+    } catch (error) {
+      if (attempt === retries) {
+        console.error('Database query error (final attempt):', error.message);
+        throw error;
+      }
+      // Only log retry warnings for non-trivial errors
+      if (error.code !== '57P01' && error.code !== '57P02') { // Skip connection errors in retry logs
+        console.warn(`⚠️ Database query failed (attempt ${attempt}/${retries}), retrying...`, error.message);
+      }
+      await new Promise(resolve => setTimeout(resolve, 1000 * attempt)); // Exponential backoff
+    }
   }
+};
+
+// Test database connection with retry logic
+const testConnection = async (maxRetries = 5, retryDelay = 2000) => {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const result = await pool.query('SELECT NOW() as current_time');
+      console.log('✅ Database connection verified');
+      return true;
+    } catch (error) {
+      if (attempt === maxRetries) {
+        console.error(`❌ Database connection failed after ${maxRetries} attempts:`, error.message);
+        return false;
+      }
+      console.warn(`⚠️ Database connection attempt ${attempt}/${maxRetries} failed, retrying in ${retryDelay}ms...`, error.message);
+      await new Promise(resolve => setTimeout(resolve, retryDelay));
+    }
+  }
+  return false;
 };
 
 // Get client for transactions
@@ -75,6 +113,7 @@ const getClient = async () => {
 module.exports = {
   query,
   getClient,
-  pool
+  pool,
+  testConnection
 };
 

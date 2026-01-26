@@ -33,13 +33,36 @@ const ALLOWED_TRANSITIONS = {
   // Disallowed: revoked → expired, expired → trial, active → trial
 };
 
+// Throttle auto-fix to prevent excessive database queries
+const autoFixCache = new Map();
+const AUTO_FIX_THROTTLE_MS = 30000; // 30 seconds - only run once per 30 seconds per device
+let isAutoFixing = false; // Prevent concurrent executions
+
 /**
  * CRITICAL: Auto-fix database inconsistencies
  * This ensures revoked licenses are automatically deactivated
- * Runs automatically on every license check (non-blocking)
+ * CRITICAL: Throttled to prevent excessive database queries
  * Handles missing columns gracefully (doesn't try to add them - use migration script)
  */
 async function autoFixLicenseInconsistencies(deviceId = null) {
+  // Prevent concurrent executions
+  if (isAutoFixing) {
+    return; // Already running, skip
+  }
+
+  // Throttle: Check if we've run this recently
+  const cacheKey = deviceId || 'global';
+  const lastRun = autoFixCache.get(cacheKey);
+  const now = Date.now();
+  
+  if (lastRun && (now - lastRun) < AUTO_FIX_THROTTLE_MS) {
+    // Too soon - skip this run
+    return;
+  }
+
+  // Mark as running
+  isAutoFixing = true;
+  
   try {
     // First, check if status column exists
     let hasStatusColumn = false;
@@ -59,6 +82,7 @@ async function autoFixLicenseInconsistencies(deviceId = null) {
       // Status column doesn't exist - can't fix status-based issues
       // User needs to run migration script: database/migration_add_missing_columns.sql
       console.warn('[License Storage] ⚠️ Status column missing. Please run: database/migration_add_missing_columns.sql');
+      // Don't return here - let finally block execute to reset isAutoFixing
       return; // Skip status-based fixes if column doesn't exist
     }
 
@@ -116,13 +140,19 @@ async function autoFixLicenseInconsistencies(deviceId = null) {
     if (error.code !== '42501' && error.code !== '42703') {
       console.error('[License Storage] ⚠️ Error in auto-fix (non-critical):', error.message);
     }
+  } finally {
+    // Mark as complete and update cache
+    isAutoFixing = false;
+    autoFixCache.set(cacheKey, now);
   }
 }
 
-// Run global auto-fix on module load (non-blocking, once)
-autoFixLicenseInconsistencies().catch(err => {
-  // Ignore errors on startup - will fix on next license check
-});
+// Run global auto-fix on module load (non-blocking, once, with delay to avoid startup conflicts)
+setTimeout(() => {
+  autoFixLicenseInconsistencies().catch(err => {
+    // Ignore errors on startup - will fix on next license check
+  });
+}, 5000); // Wait 5 seconds after module load to avoid startup conflicts
 
 /**
  * Encrypt sensitive data

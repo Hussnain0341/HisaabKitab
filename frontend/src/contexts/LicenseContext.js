@@ -140,46 +140,48 @@ export const LicenseProvider = ({ children }) => {
    * Never blocks UI, never crashes, always favors customer
    * CRITICAL: Sets loading state properly to prevent race conditions
    * CRITICAL: Handles device ID changes (cache cleared) gracefully
+   * CRITICAL: Prevents concurrent calls to avoid loops
    */
   const checkLicenseStatus = useCallback(async () => {
+    // Prevent concurrent calls
+    if (checkLicenseStatus.inProgress) {
+      console.log('[License Context] License check already in progress, skipping...');
+      return { state: licenseState, data: null };
+    }
+    
+    checkLicenseStatus.inProgress = true;
+    
     try {
       setLoading(true);
       setError(null);
       
-      console.log('[License Context] Checking license status...');
+      // console.log('[License Context] Checking license status...');
       
       // Call backend to get LOCAL license status (non-blocking)
       const result = await licenseService.getLicenseStatus();
       
-      console.log('[License Context] License status result:', {
-        success: result.success,
-        hasData: !!result.data,
-        state: result.data?.state,
-        activated: result.data?.activated,
-        valid: result.data?.valid
-      });
+      // Reduce logging to prevent console spam
+      // console.log('[License Context] License status result:', {
+      //   success: result.success,
+      //   hasData: !!result.data,
+      //   state: result.data?.state,
+      //   activated: result.data?.activated,
+      //   valid: result.data?.valid
+      // });
       
       if (result.success && result.data) {
         const state = determineLicenseState(result.data);
         setLicenseState(state);
         setLicenseInfo(result.data.license || null);
         
-        // CRITICAL: Log the state determination for debugging
-        console.log('[License Context] License check result:', {
-          backendState: result.data.state,
-          backendActivated: result.data.activated,
-          backendValid: result.data.valid,
-          determinedState: state,
-          isActivated: state === LICENSE_STATES.ACTIVATED,
-          willDisableOperations: state !== LICENSE_STATES.ACTIVATED
-        });
-        
+        // Reduce logging to prevent console spam
         // CRITICAL: If ACTIVATED, trust local state forever
         if (state === LICENSE_STATES.ACTIVATED) {
-          console.log('[License Context] ✅ License is ACTIVATED (lifetime) - trusting local state');
-        } else {
-          console.log('[License Context] ⚠️ License state:', state, '- operations will be disabled');
+          // console.log('[License Context] ✅ License is ACTIVATED (lifetime) - trusting local state');
         }
+        // else {
+        //   console.log('[License Context] ⚠️ License state:', state, '- operations will be disabled');
+        // }
         
         return { state, data: result.data };
       } else {
@@ -201,9 +203,10 @@ export const LicenseProvider = ({ children }) => {
       // CRITICAL: Always set loading to false, even on error
       // This ensures UI doesn't stay in loading state forever
       setLoading(false);
-      console.log('[License Context] License check completed, loading set to false');
+      checkLicenseStatus.inProgress = false;
+      // console.log('[License Context] License check completed, loading set to false');
     }
-  }, [determineLicenseState]);
+  }, [determineLicenseState, licenseState]);
 
   /**
    * Activate license (one-time activation)

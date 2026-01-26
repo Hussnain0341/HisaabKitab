@@ -25,7 +25,7 @@ const Sidebar = () => {
     { id: 'reports', labelKey: 'menu.reports', path: '/reports', icon: '📈', feature: 'reports', adminOnly: true },
     { id: 'users', labelKey: 'menu.users', path: '/users', icon: '👤', adminOnly: true },
     { id: 'settings', labelKey: 'menu.settings', path: '/settings', icon: '⚙️' },
-    { id: 'categories', labelKey: 'menu.categories', path: '/categories', icon: '🏷️', adminOnly: true },
+    { id: 'categories', labelKey: 'menu.categories', path: '/categories', icon: '🏷️' },
   ];
 
   // Filter menu items based on license features and user role

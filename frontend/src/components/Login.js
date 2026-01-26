@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
 import { authAPI } from '../services/api';
@@ -14,6 +14,31 @@ function Login() {
   const [pin, setPin] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  
+  // CRITICAL: Re-enable all inputs when Login component mounts
+  // This fixes the issue where inputs get stuck after logout
+  useEffect(() => {
+    const reenableInputs = () => {
+      const allInputs = document.querySelectorAll('input, textarea, select');
+      allInputs.forEach(input => {
+        input.disabled = false;
+        input.readOnly = false;
+        input.removeAttribute('data-license-disabled');
+      });
+      
+      // Remove any disabling classes
+      const appElement = document.querySelector('.app');
+      if (appElement) {
+        appElement.classList.remove('operations-disabled');
+      }
+    };
+    
+    // Run immediately and after a short delay to catch any async updates
+    reenableInputs();
+    const timeoutId = setTimeout(reenableInputs, 100);
+    
+    return () => clearTimeout(timeoutId);
+  }, []);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [recoveryStep, setRecoveryStep] = useState('request'); // 'request' or 'reset'
   const [recoveryUsername, setRecoveryUsername] = useState('');

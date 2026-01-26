@@ -6,6 +6,10 @@ const deviceFingerprint = require('../utils/deviceFingerprint');
 const licenseCache = new Map();
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
+// Throttle license validity checks to prevent excessive queries
+const validityCheckCache = new Map();
+const VALIDITY_CHECK_THROTTLE_MS = 60000; // 1 minute - only check validity once per minute per device
+
 /**
  * Get cached license or fetch from database
  */
@@ -52,8 +56,14 @@ function clearAllLicenseCache() {
  * CRITICAL: Uses caching to avoid excessive database queries
  */
 async function checkLicense(req, res, next) {
-  // Skip license check for health, license, and setup endpoints
-  if (req.path === '/api/health' || req.path.startsWith('/api/license') || req.path.startsWith('/api/setup')) {
+  // Skip license check for health, license, setup, and auth endpoints
+  // CRITICAL: Skip auth endpoints to prevent login loop
+  if (
+    req.path === '/api/health' || 
+    req.path.startsWith('/api/license') || 
+    req.path.startsWith('/api/setup') ||
+    req.path.startsWith('/api/auth')
+  ) {
     return next();
   }
 
@@ -78,20 +88,36 @@ async function checkLicense(req, res, next) {
       return next();
     }
 
-    // Check if license is valid
+    // Check if license is valid (throttled to prevent excessive queries)
     let isValid = false;
     try {
-      isValid = await licenseStorage.isLicenseValid(deviceId);
-      console.log('[License Middleware] License validity check result:', {
-        deviceId: deviceId.substring(0, 16) + '...',
-        isValid: isValid,
-        licenseId: license.license_id?.substring(0, 8) + '...',
-        isActive: license.is_active,
-        status: license.status
-      });
+      // Throttle validity checks - only check once per minute per device
+      const validityCacheKey = deviceId;
+      const lastValidityCheck = validityCheckCache.get(validityCacheKey);
+      const now = Date.now();
+      
+      if (lastValidityCheck && (now - lastValidityCheck.timestamp) < VALIDITY_CHECK_THROTTLE_MS) {
+        // Use cached validity result
+        isValid = lastValidityCheck.isValid;
+        console.log('[License Middleware] Using cached validity result:', {
+          deviceId: deviceId.substring(0, 16) + '...',
+          isValid: isValid,
+          cached: true
+        });
+      } else {
+        // Check validity (will be cached)
+        isValid = await licenseStorage.isLicenseValid(deviceId);
+        validityCheckCache.set(validityCacheKey, { isValid, timestamp: now });
+        console.log('[License Middleware] License validity check result:', {
+          deviceId: deviceId.substring(0, 16) + '...',
+          isValid: isValid,
+          licenseId: license.license_id?.substring(0, 8) + '...',
+          isActive: license.is_active,
+          status: license.status
+        });
+      }
     } catch (validError) {
       console.error('[License Middleware] Error checking validity:', validError.message);
-      console.error('[License Middleware] Error stack:', validError.stack);
       // If validation check fails, assume invalid but still allow request
       isValid = false;
     }

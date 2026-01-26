@@ -213,6 +213,7 @@ router.post('/validate', async (req, res) => {
       
       // Also clear all cache to ensure consistency
       clearAllLicenseCache();
+      clearStatusCache(deviceIdToUse);
     } catch (storeError) {
       // CRITICAL: If write fails, don't mark activation as complete
       console.error('[License] Failed to store license:', storeError);
@@ -251,17 +252,42 @@ router.post('/validate', async (req, res) => {
   }
 });
 
+// Cache for status endpoint to prevent excessive calls
+const statusCache = new Map();
+const STATUS_CACHE_TTL = 5000; // 5 seconds - cache status for 5 seconds
+
+// Function to clear status cache
+function clearStatusCache(deviceId = null) {
+  if (deviceId) {
+    statusCache.delete(deviceId);
+  } else {
+    statusCache.clear();
+  }
+}
+
 /**
  * Get current license status
  * CRITICAL: Loads LOCAL license first (source of truth)
  * CRITICAL: If device ID changed (cache cleared), tries to find license by other means
  * Server validation is optional and advisory only
+ * CRITICAL: Cached to prevent excessive calls
  */
 router.get('/status', async (req, res) => {
   try {
     const deviceId = req.headers['x-device-id'] || deviceFingerprint.getDeviceId();
     
-    console.log('[License] Status check - device ID:', deviceId.substring(0, 16) + '...');
+    // Check cache first
+    const cacheKey = deviceId;
+    const cached = statusCache.get(cacheKey);
+    const now = Date.now();
+    
+    if (cached && (now - cached.timestamp) < STATUS_CACHE_TTL) {
+      // Return cached result
+      return res.json(cached.data);
+    }
+    
+    // Only log if not using cache (reduce console spam)
+    // console.log('[License] Status check - device ID:', deviceId.substring(0, 16) + '...');
     
     // STEP 1: Load LOCAL license (source of truth)
     let license = await licenseStorage.getLicense(deviceId);
@@ -297,6 +323,8 @@ router.get('/status', async (req, res) => {
           // Clear cache
           clearLicenseCache(foundLicense.device_id);
           clearLicenseCache(deviceId);
+          clearStatusCache(foundLicense.device_id);
+          clearStatusCache(deviceId);
           
           // Now get the license with the updated device_id
           license = await licenseStorage.getLicense(deviceId);
@@ -309,13 +337,21 @@ router.get('/status', async (req, res) => {
     }
     
     if (!license) {
-      console.log('[License] No license found - returning unactivated state');
-      return res.json({
+      // console.log('[License] No license found - returning unactivated state');
+      const responseData = {
         activated: false,
         valid: false,
         state: 'UNACTIVATED',
         message: 'No license found. Please activate your license.'
+      };
+      
+      // Cache the response
+      statusCache.set(cacheKey, {
+        data: responseData,
+        timestamp: now
       });
+      
+      return res.json(responseData);
     }
 
     // STEP 3: Check LOCAL validity (never trust server blindly)
@@ -333,15 +369,16 @@ router.get('/status', async (req, res) => {
       state = 'UNACTIVATED'; // Expired locally
     }
 
-    console.log('[License] License status:', {
-      state,
-      isValid,
-      isActive: license.is_active,
-      isExpired
-    });
+    // Only log if not using cache (reduce console spam)
+    // console.log('[License] License status:', {
+    //   state,
+    //   isValid,
+    //   isActive: license.is_active,
+    //   isExpired
+    // });
 
-    // Return LOCAL status (server validation happens separately, non-blocking)
-    res.json({
+    // Prepare response data
+    const responseData = {
       activated: isValid && license.is_active,
       valid: isValid,
       expired: isExpired,
@@ -354,7 +391,16 @@ router.get('/status', async (req, res) => {
         maxUsers: license.max_users,
         lastValidated: license.last_validated_at
       }
+    };
+
+    // Cache the response
+    statusCache.set(cacheKey, {
+      data: responseData,
+      timestamp: now
     });
+
+    // Return LOCAL status (server validation happens separately, non-blocking)
+    res.json(responseData);
   } catch (error) {
     console.error('[License] Error getting license status:', error);
     console.error('[License] Error stack:', error.stack);
