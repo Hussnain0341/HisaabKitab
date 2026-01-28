@@ -1,9 +1,26 @@
 const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
 const { spawn } = require('child_process');
+const UpdateManager = require('./src/update/UpdateManager');
+const UpdateUIBridge = require('./src/update/updateUIBridge');
+const packageJson = require('./package.json');
 
 let mainWindow;
 let backendProcess;
+
+// Special CLI mode: run database setup and exit (used by installer)
+if (process.argv.includes('--setup-db-auto')) {
+  console.log('[HisaabKitab] Running automatic database setup (installer mode)...');
+  process.env.HK_AUTO_SETUP = '1';
+  try {
+    // This script will connect to PostgreSQL, create DB if missing,
+    // and run database/complete_schema.sql, then exit.
+    require('./database/setup.js');
+  } catch (err) {
+    console.error('[HisaabKitab] Automatic database setup failed:', err);
+    process.exit(1);
+  }
+}
 
 // Wait for backend to be ready by polling health endpoint
 function waitForBackend(maxRetries = 30, retryDelay = 1000) {
@@ -156,6 +173,11 @@ function createWindow() {
 
   mainWindow.once('ready-to-show', () => {
     mainWindow.show();
+    
+    // Initialize update manager after window is ready
+    if (!updateManager) {
+      initializeUpdateManager(mainWindow);
+    }
   });
 
   mainWindow.on('closed', () => {
@@ -293,6 +315,49 @@ ipcMain.handle('select-directory', async () => {
   }
 });
 
+// ============================================
+// CUSTOM UPDATE MANAGER CONFIGURATION
+// ============================================
+
+let updateManager = null;
+let updateUIBridge = null;
+
+// Initialize update manager after window is created
+function initializeUpdateManager(window) {
+  try {
+    updateManager = new UpdateManager({
+      apiBaseUrl: 'https://api.zentryasolutions.com',
+      currentVersion: packageJson.version,
+      platform: 'windows',
+      checkInterval: 24 * 60 * 60 * 1000, // 24 hours
+      mainWindow: window,
+      onUpdateAvailable: (updateInfo) => {
+        console.log(`[UpdateManager] Update available: ${updateInfo.version}`);
+      },
+      onDownloadProgress: (progress, downloaded, total) => {
+        console.log(`[UpdateManager] Download: ${progress.toFixed(1)}%`);
+      },
+      onUpdateError: (error) => {
+        console.error('[UpdateManager] Update error:', error);
+      }
+    });
+    
+    // Initialize update manager (starts checking for updates)
+    updateManager.initialize().catch(err => {
+      console.error('[UpdateManager] Initialization error:', err);
+      // Silent failure - POS continues normally
+    });
+    
+    // Setup IPC bridge
+    updateUIBridge = new UpdateUIBridge(updateManager);
+    
+    console.log('[UpdateManager] Initialized successfully');
+  } catch (error) {
+    console.error('[UpdateManager] Failed to initialize:', error);
+    // Never crash app - continue silently
+  }
+}
+
 app.whenReady().then(async () => {
   try {
     // Start backend server and wait for it to be ready
@@ -302,6 +367,12 @@ app.whenReady().then(async () => {
     
     // Create main window after backend is ready
     createWindow();
+    
+    // Initialize update manager after window is created
+    // Update manager will check for updates automatically (5 second delay)
+    if (mainWindow) {
+      initializeUpdateManager(mainWindow);
+    }
 
     app.on('activate', () => {
       if (BrowserWindow.getAllWindows().length === 0) {

@@ -2,6 +2,25 @@
 # STRICT COST OPTIMIZATION - .cursorignore
 # Goal: Reduce token usage from MILLIONS to THOUSANDS
 # ============================================
+# IMPORTANT: Always allow critical project files (exceptions at top)
+# ============================================
+# Critical files that MUST be editable (never block these)
+!package.json
+!package-lock.json
+!main.js
+!preload.js
+!database/setup.js
+!database/complete_schema.sql
+!build/installer.nsh
+!build/*.nsh
+!scripts/*.js
+!backend/server.js
+!backend/db.js
+!backend/.env.example
+!frontend/src/locales/en.json
+!frontend/src/locales/ur.json
+!frontend/src/locales/*.json
+# ============================================
 
 # ============================================
 # CRITICAL: Node.js Dependencies (BIGGEST TOKEN CONSUMER)
@@ -19,6 +38,9 @@ pnpm-lock.yaml
 # ============================================
 # CRITICAL: Build & Distribution Output
 # ============================================
+# IMPORTANT: NSIS installer scripts MUST be editable (exceptions before exclusion)
+!build/installer.nsh
+!build/*.nsh
 build/
 **/build/
 dist/
@@ -67,7 +89,7 @@ backup/*.sql
 **/backup/*.sql
 backend/backup/*.sql
 **/backend/backup/*.sql
-# Exclude SQL files except in database folder (keep schema/migration files)
+# Exclude ALL SQL files by default (large), but KEEP database schema/migrations
 *.sql
 !database/*.sql
 !database/**/*.sql
@@ -75,7 +97,7 @@ backend/backup/*.sql
 *.db
 *.sqlite
 *.sqlite3
-# Impact: SQL backups can be 10-100MB each, but keep database schema files
+# Impact: SQL backups can be 10-100MB each
 
 # ============================================
 # CRITICAL: Source Maps & Compiled Assets
@@ -253,6 +275,7 @@ database/run-*.js
 # ============================================
 # CRITICAL: Scripts & Utilities (if not actively editing)
 # ============================================
+# IMPORTANT: scripts/*.js is allowed (see top of file)
 scripts/
 **/scripts/
 # Impact: Scripts are rarely edited, exclude unless needed
@@ -260,9 +283,7 @@ scripts/
 # ============================================
 # CRITICAL: Electron Main Files (if not actively editing)
 # ============================================
-# Allow main.js and preload.js (essential for Electron)
-!main.js
-!preload.js
+# IMPORTANT: main.js and preload.js are allowed (see top of file)
 electron-builder.yml
 # Impact: Electron config rarely changes, but main files are essential
 
@@ -278,6 +299,9 @@ public/
 # ============================================
 # CRITICAL: Assets Folder
 # ============================================
+# Allow assets/postgres/ for PostgreSQL installer bundling
+!assets/postgres/
+!assets/postgres/**/*
 assets/
 **/assets/
 # Impact: Asset files are static
@@ -306,7 +330,7 @@ backend/package-lock.json
 # Impact: date-fns alone has 100+ locale files, each consuming tokens
 
 # ============================================
-# CRITICAL: Large Binary Executables
+# CRITICAL: Large Binary Executables & Certificates
 # ============================================
 # Electron and build tools (already excluded via node_modules, but explicit)
 **/electron/dist/
@@ -315,6 +339,13 @@ backend/package-lock.json
 **/*.dll
 **/*.so
 **/*.dylib
+
+# Certificates (.pfx) - keep out of AI context
+*.pfx
+**/*.pfx
+# But allow NSIS installer scripts (*.nsh)
+!*.nsh
+!**/*.nsh
 # Impact: Electron.exe is 172MB, app-builder binaries are 10-20MB each
 
 # ============================================
@@ -346,11 +377,12 @@ backend/package-lock.json
 # CRITICAL: Additional Token Optimization
 # ============================================
 # CRITICAL: Exclude locale/translation JSON files (50KB+ each, consume 50k+ tokens per search!)
+# Exclude all locale JSON files by default
 **/locales/*.json
-frontend/src/locales/*.json
-# But allow if explicitly needed (uncomment if needed)
-# !frontend/src/locales/en.json
-# !frontend/src/locales/ur.json
+# IMPORTANT: Allow frontend locale files (needed for translation fixes) - MUST be editable
+!frontend/src/locales/en.json
+!frontend/src/locales/ur.json
+!frontend/src/locales/*.json
 
 # Exclude JSON backup files
 *.json.bak

@@ -21,4 +21,39 @@ contextBridge.exposeInMainWorld('electronAPI', {
   
   // Directory selection API for backup location
   selectDirectory: () => ipcRenderer.invoke('select-directory'),
+
+  // ============================
+  // Update system API (custom)
+  // ============================
+
+  // Manual update check (from Settings/hidden menu)
+  checkForUpdatesManual: () => ipcRenderer.invoke('update-check-manual'),
+
+  // Trigger install of the currently available update
+  installUpdateNow: (updateInfo) => ipcRenderer.invoke('update-install-now', updateInfo),
+
+  // Skip a specific version (optional updates only)
+  skipUpdateVersion: (version) => ipcRenderer.invoke('update-skip', version),
+
+  // Get update status/state from main process
+  getUpdateStatus: () => ipcRenderer.invoke('get-update-status'),
+
+  // Subscribe to update events from main process
+  onUpdateEvent: (channel, listener) => {
+    const validChannels = [
+      'update-available',
+      'update-download-started',
+      'update-download-progress',
+      'update-installing',
+      'update-error',
+    ];
+    if (validChannels.includes(channel)) {
+      ipcRenderer.on(channel, listener);
+    }
+  },
+
+  // Unsubscribe from update events
+  removeUpdateListener: (channel, listener) => {
+    ipcRenderer.removeListener(channel, listener);
+  },
 });

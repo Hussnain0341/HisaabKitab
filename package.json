@@ -23,7 +23,7 @@
     "electron",
     "offline"
   ],
-  "author": "HisaabKitab",
+  "author": "Zentrya Solutions (SMC-PRIVATE) LIMITED",
   "license": "MIT",
   "devDependencies": {
     "concurrently": "^8.2.2",
@@ -44,6 +44,13 @@
     "directories": {
       "output": "dist"
     },
+    "extraResources": [
+      {
+        "from": "assets/postgres",
+        "to": "postgres",
+        "filter": ["*.exe"]
+      }
+    ],
     "files": [
       "main.js",
       "preload.js",
@@ -66,14 +73,20 @@
           "arch": ["x64"]
         }
       ],
-      "icon": "assets/icon.ico"
+      "icon": "assets/icon.ico",
+      "publisherName": "Zentrya Solutions (SMC-PRIVATE) LIMITED"
+    },
+    "publish": {
+      "provider": "generic",
+      "url": "https://updates.hisaabkitab.com/windows/"
     },
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "HisaabKitab"
+      "shortcutName": "HisaabKitab",
+      "include": "build/installer.nsh"
     }
   }
 }

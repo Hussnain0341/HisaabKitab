@@ -56,6 +56,20 @@ let dbReady = false;
   dbReady = await db.testConnection(5, 2000); // 5 retries, 2 second delay
   
   if (dbReady) {
+    // Run database migrations on startup (non-blocking)
+    const migrationService = require('./utils/migrationService');
+    migrationService.runMigrations()
+      .then(result => {
+        if (result.success) {
+          console.log(`[Migration Service] ✅ Migrations completed: ${result.applied.length} applied`);
+        } else {
+          console.error(`[Migration Service] ❌ Migration failed:`, result.error);
+        }
+      })
+      .catch(err => {
+        console.error('[Migration Service] Error running migrations:', err);
+      });
+    
     // Initialize backup scheduler and perform startup backup
     const backupScheduler = require('./utils/backupScheduler');
     backupScheduler.initializeScheduler().then(() => {
@@ -187,6 +201,7 @@ app.use('/api/settings', require('./routes/settings'));
 app.use('/api/backup', require('./routes/backup'));
 app.use('/api/users', require('./routes/users'));
 app.use('/api/notifications', require('./routes/notifications').router);
+app.use('/api/updates', require('./routes/updates'));
 
 // Catch-all route for React app (must be last, after all API routes)
 // This serves index.html for any non-API routes (React Router)

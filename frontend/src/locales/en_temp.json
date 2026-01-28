@@ -820,22 +820,5 @@
                   "setupCompleteMessage":  "Your administrator account has been created successfully.",
                   "redirecting":  "Redirecting",
                   "setupFailed":  "Setup failed. Please try again."
-              },
-    "updates":  {
-                     "updateAvailable":  "Update Available",
-                     "newVersionAvailable":  "New Version Available",
-                     "updateNow":  "Update Now",
-                     "later":  "Later",
-                     "checking":  "Checking for Updates",
-                     "checkingMessage":  "Checking for available updates...",
-                     "mandatoryUpdate":  "Mandatory Update Required",
-                     "mandatoryUpdateMessage":  "This update is mandatory. The application will download and install it automatically.",
-                     "downloading":  "Downloading Update",
-                     "downloadingMessage":  "Downloading update, please wait...",
-                     "installing":  "Installing Update",
-                     "installingMessage":  "Installing version",
-                     "restartRequired":  "The application will restart automatically after installation.",
-                     "updateError":  "Update Error",
-                     "updateErrorMessage":  "An error occurred while updating. Please try again later."
-                 }
+              }
 }

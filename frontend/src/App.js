@@ -22,6 +22,7 @@ import Header from './components/Header';
 import ConnectionStatus from './components/ConnectionStatus';
 import ErrorBoundary from './components/ErrorBoundary';
 import LicenseBanner from './components/LicenseBanner';
+import UpdateNotification from './components/UpdateNotification';
 import Login from './components/Login';
 import FirstTimeSetup from './components/FirstTimeSetup';
 import { LicenseProvider, useLicense } from './contexts/LicenseContext';
@@ -455,6 +456,7 @@ function AppContent({ location }) {
   return (
     <div className="app">
       <LicenseBanner />
+      <UpdateNotification />
       <Header />
       <ConnectionStatus 
         onRefresh={handleRefresh}

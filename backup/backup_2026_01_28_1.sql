@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict 10MQ5ZrEcQgDPZNxmisbS3KYgOArdeDA0AaynL76Az2HtiVTe9K85G5bSd44wxR
+\restrict v9kfleCq8iH1ufbtKmahwyqPcaSB378FgNPh5aEdLoDTBMBd8nqALOb2pHrO602
 
 -- Dumped from database version 15.15
 -- Dumped by pg_dump version 15.15
@@ -102,6 +102,8 @@ ALTER TABLE IF EXISTS ONLY public.supplier_payments DROP CONSTRAINT IF EXISTS su
 ALTER TABLE IF EXISTS ONLY public.sub_categories DROP CONSTRAINT IF EXISTS sub_categories_pkey;
 ALTER TABLE IF EXISTS ONLY public.sub_categories DROP CONSTRAINT IF EXISTS sub_categories_category_id_sub_category_name_key;
 ALTER TABLE IF EXISTS ONLY public.settings DROP CONSTRAINT IF EXISTS settings_pkey;
+ALTER TABLE IF EXISTS ONLY public.schema_version DROP CONSTRAINT IF EXISTS schema_version_version_key;
+ALTER TABLE IF EXISTS ONLY public.schema_version DROP CONSTRAINT IF EXISTS schema_version_pkey;
 ALTER TABLE IF EXISTS ONLY public.sales DROP CONSTRAINT IF EXISTS sales_pkey;
 ALTER TABLE IF EXISTS ONLY public.sales DROP CONSTRAINT IF EXISTS sales_invoice_number_key;
 ALTER TABLE IF EXISTS ONLY public.sale_items DROP CONSTRAINT IF EXISTS sale_items_pkey;
@@ -126,6 +128,7 @@ ALTER TABLE IF EXISTS public.suppliers ALTER COLUMN supplier_id DROP DEFAULT;
 ALTER TABLE IF EXISTS public.supplier_payments ALTER COLUMN payment_id DROP DEFAULT;
 ALTER TABLE IF EXISTS public.sub_categories ALTER COLUMN sub_category_id DROP DEFAULT;
 ALTER TABLE IF EXISTS public.settings ALTER COLUMN id DROP DEFAULT;
+ALTER TABLE IF EXISTS public.schema_version ALTER COLUMN id DROP DEFAULT;
 ALTER TABLE IF EXISTS public.sales ALTER COLUMN sale_id DROP DEFAULT;
 ALTER TABLE IF EXISTS public.sale_items ALTER COLUMN sale_item_id DROP DEFAULT;
 ALTER TABLE IF EXISTS public.purchases ALTER COLUMN purchase_id DROP DEFAULT;
@@ -151,6 +154,8 @@ DROP SEQUENCE IF EXISTS public.sub_categories_sub_category_id_seq;
 DROP TABLE IF EXISTS public.sub_categories;
 DROP SEQUENCE IF EXISTS public.settings_id_seq;
 DROP TABLE IF EXISTS public.settings;
+DROP SEQUENCE IF EXISTS public.schema_version_id_seq;
+DROP TABLE IF EXISTS public.schema_version;
 DROP SEQUENCE IF EXISTS public.sales_sale_id_seq;
 DROP TABLE IF EXISTS public.sales;
 DROP SEQUENCE IF EXISTS public.sale_items_sale_item_id_seq;
@@ -1029,6 +1034,39 @@ ALTER SEQUENCE public.sales_sale_id_seq OWNED BY public.sales.sale_id;
 
 
 --
+-- Name: schema_version; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.schema_version (
+    id integer NOT NULL,
+    version integer NOT NULL,
+    applied_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    description text,
+    success boolean DEFAULT true
+);
+
+
+--
+-- Name: schema_version_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.schema_version_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: schema_version_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.schema_version_id_seq OWNED BY public.schema_version.id;
+
+
+--
 -- Name: settings; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -1342,6 +1380,13 @@ ALTER TABLE ONLY public.sales ALTER COLUMN sale_id SET DEFAULT nextval('public.s
 
 
 --
+-- Name: schema_version id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.schema_version ALTER COLUMN id SET DEFAULT nextval('public.schema_version_id_seq'::regclass);
+
+
+--
 -- Name: settings id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -1422,6 +1467,24 @@ COPY public.audit_logs (log_id, user_id, action, table_name, record_id, old_valu
 39	2	password_recovery_requested	\N	\N	\N	\N	127.0.0.1	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) hisaabkitab/1.0.0 Chrome/120.0.6099.291 Electron/28.3.3 Safari/537.36	2026-01-26 01:48:12.10517	Password recovery key generated
 40	2	login	\N	\N	\N	\N	127.0.0.1	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) hisaabkitab/1.0.0 Chrome/120.0.6099.291 Electron/28.3.3 Safari/537.36	2026-01-26 01:48:46.565212	User logged in successfully
 41	2	logout	\N	\N	\N	\N	127.0.0.1	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) hisaabkitab/1.0.0 Chrome/120.0.6099.291 Electron/28.3.3 Safari/537.36	2026-01-26 02:37:05.449261	User logged out
+42	2	login	\N	\N	\N	\N	127.0.0.1	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) hisaabkitab/1.0.0 Chrome/120.0.6099.291 Electron/28.3.3 Safari/537.36	2026-01-26 15:09:02.069753	User logged in successfully
+43	2	logout	\N	\N	\N	\N	127.0.0.1	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) hisaabkitab/1.0.0 Chrome/120.0.6099.291 Electron/28.3.3 Safari/537.36	2026-01-26 15:09:26.547806	User logged out
+44	1	login	\N	\N	\N	\N	127.0.0.1	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) hisaabkitab/1.0.0 Chrome/120.0.6099.291 Electron/28.3.3 Safari/537.36	2026-01-26 15:09:54.9078	User logged in successfully
+45	1	view_sensitive	users	\N	\N	\N	127.0.0.1	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) hisaabkitab/1.0.0 Chrome/120.0.6099.291 Electron/28.3.3 Safari/537.36	2026-01-26 15:10:04.229431	Accessed sensitive resource: users
+46	1	logout	\N	\N	\N	\N	127.0.0.1	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) hisaabkitab/1.0.0 Chrome/120.0.6099.291 Electron/28.3.3 Safari/537.36	2026-01-26 15:10:49.447967	User logged out
+47	2	login	\N	\N	\N	\N	127.0.0.1	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) hisaabkitab/1.0.0 Chrome/120.0.6099.291 Electron/28.3.3 Safari/537.36	2026-01-26 15:24:32.524736	User logged in successfully
+48	2	logout	\N	\N	\N	\N	127.0.0.1	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) hisaabkitab/1.0.0 Chrome/120.0.6099.291 Electron/28.3.3 Safari/537.36	2026-01-26 15:46:09.857674	User logged out
+49	1	login	\N	\N	\N	\N	127.0.0.1	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) hisaabkitab/1.0.0 Chrome/120.0.6099.291 Electron/28.3.3 Safari/537.36	2026-01-26 15:47:06.715491	User logged in successfully
+50	1	view_sensitive	users	\N	\N	\N	127.0.0.1	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) hisaabkitab/1.0.0 Chrome/120.0.6099.291 Electron/28.3.3 Safari/537.36	2026-01-26 16:15:21.845325	Accessed sensitive resource: users
+51	1	logout	\N	\N	\N	\N	127.0.0.1	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) hisaabkitab/1.0.0 Chrome/120.0.6099.291 Electron/28.3.3 Safari/537.36	2026-01-26 16:15:48.729133	User logged out
+52	2	login	\N	\N	\N	\N	127.0.0.1	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) hisaabkitab/1.0.0 Chrome/120.0.6099.291 Electron/28.3.3 Safari/537.36	2026-01-26 16:16:00.659229	User logged in successfully
+53	1	login	\N	\N	\N	\N	127.0.0.1	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) hisaabkitab/1.0.0 Chrome/120.0.6099.291 Electron/28.3.3 Safari/537.36	2026-01-28 13:47:13.816471	User logged in successfully
+54	1	view_sensitive	users	\N	\N	\N	127.0.0.1	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) hisaabkitab/1.0.0 Chrome/120.0.6099.291 Electron/28.3.3 Safari/537.36	2026-01-28 13:54:09.302319	Accessed sensitive resource: users
+55	1	view_sensitive	users	\N	\N	\N	127.0.0.1	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) hisaabkitab/1.0.0 Chrome/120.0.6099.291 Electron/28.3.3 Safari/537.36	2026-01-28 13:54:16.048991	Accessed sensitive resource: users
+56	1	view_sensitive	users	\N	\N	\N	127.0.0.1	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) hisaabkitab/1.0.0 Chrome/120.0.6099.291 Electron/28.3.3 Safari/537.36	2026-01-28 13:59:22.489702	Accessed sensitive resource: users
+57	1	view_sensitive	users	\N	\N	\N	127.0.0.1	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) hisaabkitab/1.0.0 Chrome/120.0.6099.291 Electron/28.3.3 Safari/537.36	2026-01-28 14:00:31.459878	Accessed sensitive resource: users
+58	1	view_sensitive	users	\N	\N	\N	127.0.0.1	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) hisaabkitab/1.0.0 Chrome/120.0.6099.291 Electron/28.3.3 Safari/537.36	2026-01-28 14:01:10.238759	Accessed sensitive resource: users
+59	1	view_sensitive	audit_logs	\N	\N	\N	127.0.0.1	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) hisaabkitab/1.0.0 Chrome/120.0.6099.291 Electron/28.3.3 Safari/537.36	2026-01-28 14:01:11.753839	Accessed sensitive resource: audit_logs
 \.
 
 
@@ -1807,8 +1870,9 @@ COPY public.encryption_keys (key_id, key_name, encrypted_key, created_at, update
 --
 
 COPY public.license_info (id, license_id, tenant_id, license_key, device_id, device_fingerprint, expires_at, last_validated_at, validation_count, is_active, features, max_users, max_devices, app_version, created_at, updated_at, last_verified_at, pending_status, pending_status_count, activated_at, last_known_valid_date, tenant_name, status) FROM stdin;
-9	5e9fb087-6780-4d87-ba16-c20f95bd9c53	Muzammil Te	a31a15cccb147305ca3c198dc6bbec24:1422bdfb2402941c6bc2930bded2ed93dc40e70fd32c447a730277c0de534294	0488783f-03d3-4f49-9860-fcf6c1438271	1e3d9f54dffbca6939642dee537b39bb:de6e1f9598090d8ec58fec543f0fedcd02a4cfd51f49ed4edb0c2bd6fb5318a66757dd10097271ffb9ef6cac1cd266c6ff8f77b2bff526987fedf281c49e6df43ca5fc8cc43739ee9e5bac7b3c00b481	2026-01-26 00:00:00	2026-01-26 02:05:36.559116	3	f	{"reports": true, "maxDevices": 3, "profitLoss": true}	3	3	1.0.0	2026-01-24 03:06:42.341592	2026-01-26 02:05:36.559116	2026-01-26 02:05:36.55385	\N	0	2026-01-24 03:06:42.341592	2026-01-26 00:00:00	\N	revoked
-10	ca5379f3-ee14-46cf-8248-01e68578ee7c	new browser tenant	d1e3fb330afb1cc892c1e76ed93a6472:7e3a62816161f29a4aeb9d4d31d222ee57090d9c818601802de2fe0ebdb12e20	0488783f-03d3-4f49-9860-fcf6c1438271	d6991a7e9948560d9a8940856bf4f44b:0f803715cbeed0429ff85d54d75d49c3b27cd689972e3f77dfd5620ca6c0edf812e9b00e43e728da24b2b53be78bff7153aebd88b07d193b120f7bb1ba41f2e13288cb293a77a4aa1618def5da1590ea	2026-01-27 00:00:00	2026-01-26 02:05:36.559116	2	t	{"reports": true, "maxDevices": 3, "profitLoss": true}	3	3	1.0.0	2026-01-24 05:18:57.119706	2026-01-26 02:05:36.559116	2026-01-26 02:05:36.55385	\N	0	2026-01-24 05:18:57.119706	2026-01-26 00:00:00	\N	\N
+9	5e9fb087-6780-4d87-ba16-c20f95bd9c53	Muzammil Te	a31a15cccb147305ca3c198dc6bbec24:1422bdfb2402941c6bc2930bded2ed93dc40e70fd32c447a730277c0de534294	0488783f-03d3-4f49-9860-fcf6c1438271	1e3d9f54dffbca6939642dee537b39bb:de6e1f9598090d8ec58fec543f0fedcd02a4cfd51f49ed4edb0c2bd6fb5318a66757dd10097271ffb9ef6cac1cd266c6ff8f77b2bff526987fedf281c49e6df43ca5fc8cc43739ee9e5bac7b3c00b481	2026-01-26 00:00:00	2026-01-28 13:59:18.351815	4	f	{"reports": true, "maxDevices": 3, "profitLoss": true}	3	3	1.0.0	2026-01-24 03:06:42.341592	2026-01-28 13:59:18.351815	2026-01-28 13:59:18.345346	\N	0	2026-01-24 03:06:42.341592	2026-01-28 00:00:00	\N	revoked
+12	6280d47c-89c2-47ba-a908-5b9a9c9f43fc	New Licese for 2 days	cded84bad37f1301a4bd08fe33f0d5fe:0cc4907bd1bce1beda590b283a418a0da10644334e1a321e77d0079e908148f0	0488783f-03d3-4f49-9860-fcf6c1438271	e9acacb806808736076bf7ae325c7ab8:c9f282e89f531d24e8b1c518d2f4e595deb062d016b726eab9d2f59c704b9c5d6f6a639b13bc056f8c4ca2f019e705eae7a8edc410b7c95c07b5a674c410e02ad74181863f37fbf0f9f14b8225205f24	2026-01-29 00:00:00	2026-01-28 13:59:18.351815	1	t	{"reports": true, "maxDevices": 1, "profitLoss": true}	1	1	1.0.0	2026-01-28 13:57:52.848074	2026-01-28 13:59:18.351815	2026-01-28 13:59:18.345346	\N	0	2026-01-28 13:57:52.848074	2026-01-28 00:00:00	\N	\N
+10	ca5379f3-ee14-46cf-8248-01e68578ee7c	new browser tenant	d1e3fb330afb1cc892c1e76ed93a6472:7e3a62816161f29a4aeb9d4d31d222ee57090d9c818601802de2fe0ebdb12e20	0488783f-03d3-4f49-9860-fcf6c1438271	d6991a7e9948560d9a8940856bf4f44b:0f803715cbeed0429ff85d54d75d49c3b27cd689972e3f77dfd5620ca6c0edf812e9b00e43e728da24b2b53be78bff7153aebd88b07d193b120f7bb1ba41f2e13288cb293a77a4aa1618def5da1590ea	2026-01-27 00:00:00	2026-01-28 13:59:18.351815	3	f	{"reports": true, "maxDevices": 3, "profitLoss": true}	3	3	1.0.0	2026-01-24 05:18:57.119706	2026-01-28 13:59:18.351815	2026-01-28 13:59:18.345346	\N	0	2026-01-24 05:18:57.119706	2026-01-28 00:00:00	\N	revoked
 \.
 
 
@@ -3084,6 +3148,7 @@ COPY public.license_logs (id, license_key, device_id, action, status, message, e
 1263	\N	ca20eaf9179e1a95	blocked_request	failed	Request blocked: License invalid or expired	Path: /api/categories, Method: GET	\N	\N	2026-01-23 19:44:59.387865
 1267	\N	ca20eaf9179e1a95	blocked_request	failed	Request blocked: License invalid or expired	Path: /api/suppliers, Method: GET	\N	\N	2026-01-23 19:45:03.387441
 1268	\N	ca20eaf9179e1a95	blocked_request	failed	Request blocked: License invalid or expired	Path: /api/products, Method: GET	\N	\N	2026-01-23 19:45:03.399315
+1288	e5da8d85e7b0d155	0488783f-03d3-4f49-9860-fcf6c1438271	activation	success	License activated successfully	\N	\N	\N	2026-01-28 13:57:52.850831
 1264	\N	ca20eaf9179e1a95	blocked_request	failed	Request blocked: License invalid or expired	Path: /api/products, Method: GET	\N	\N	2026-01-23 19:44:59.388865
 1265	\N	ca20eaf9179e1a95	blocked_request	failed	Request blocked: License invalid or expired	Path: /api/expenses, Method: GET	\N	\N	2026-01-23 19:45:01.417873
 1266	\N	ca20eaf9179e1a95	blocked_request	failed	Request blocked: License invalid or expired	Path: /api/purchases, Method: GET	\N	\N	2026-01-23 19:45:03.386405
@@ -4011,6 +4076,16 @@ COPY public.sales (sale_id, invoice_number, date, customer_name, total_amount, t
 
 
 --
+-- Data for Name: schema_version; Type: TABLE DATA; Schema: public; Owner: -
+--
+
+COPY public.schema_version (id, version, applied_at, description, success) FROM stdin;
+1	0	2026-01-28 13:38:51.879595	Initial schema version	t
+2	1	2026-01-28 13:38:51.892114	initial schema version	t
+\.
+
+
+--
 -- Data for Name: settings; Type: TABLE DATA; Schema: public; Owner: -
 --
 
@@ -4377,7 +4452,9 @@ COPY public.suppliers (supplier_id, name, contact_number, total_purchased, total
 
 COPY public.user_sessions (session_id, user_id, device_id, ip_address, user_agent, created_at, expires_at, last_activity) FROM stdin;
 4c650a16-2c9e-4ce1-8185-3fb2ac997292	1	unknown	127.0.0.1	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) hisaabkitab/1.0.0 Chrome/120.0.6099.291 Electron/28.3.3 Safari/537.36	2026-01-25 17:22:36.735249	2026-01-26 17:22:36.733	2026-01-25 17:25:25.57017
+27bd003f-88e7-404b-888c-41ad1ff156a4	1	unknown	127.0.0.1	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) hisaabkitab/1.0.0 Chrome/120.0.6099.291 Electron/28.3.3 Safari/537.36	2026-01-28 13:47:13.810086	2026-01-29 13:47:13.808	2026-01-28 16:29:26.780036
 9d5c0f93-503c-4c38-9dc9-498ea31efab0	1	unknown	127.0.0.1	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) hisaabkitab/1.0.0 Chrome/120.0.6099.291 Electron/28.3.3 Safari/537.36	2026-01-25 14:35:40.74329	2026-01-26 14:35:40.742	2026-01-25 14:38:02.150494
+6308bee7-ebd7-4d45-aa36-560ee5e86119	2	unknown	127.0.0.1	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) hisaabkitab/1.0.0 Chrome/120.0.6099.291 Electron/28.3.3 Safari/537.36	2026-01-26 16:16:00.656529	2026-01-27 16:16:00.651	2026-01-26 22:57:54.588746
 a45d29f9-c221-4e0d-8dc9-c974d15c408c	1	unknown	127.0.0.1	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) hisaabkitab/1.0.0 Chrome/120.0.6099.291 Electron/28.3.3 Safari/537.36	2026-01-25 17:15:28.715005	2026-01-26 17:15:28.713	2026-01-25 17:18:32.794272
 6ba619ab-58b9-4657-aae2-e6d71e5e3dd4	1	unknown	127.0.0.1	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) hisaabkitab/1.0.0 Chrome/120.0.6099.291 Electron/28.3.3 Safari/537.36	2026-01-25 17:18:42.772413	2026-01-26 17:18:42.771	2026-01-25 17:20:20.597138
 1856fa4a-cc40-4935-b38f-e18eeacc7a04	1	unknown	127.0.0.1	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) hisaabkitab/1.0.0 Chrome/120.0.6099.291 Electron/28.3.3 Safari/537.36	2026-01-25 17:20:30.449117	2026-01-26 17:20:30.448	2026-01-25 17:22:29.012144
@@ -4389,8 +4466,8 @@ a45d29f9-c221-4e0d-8dc9-c974d15c408c	1	unknown	127.0.0.1	Mozilla/5.0 (Windows NT
 --
 
 COPY public.users (user_id, username, password_hash, name, role, pin_hash, is_active, created_at, updated_at, last_login, password_reset_token, password_reset_expires, security_question, security_answer_hash) FROM stdin;
-1	admin	$2b$10$hM9svBmzK.fY3OvMd3lJe.WzXw91xbQMb0/7VOFIvUUzU080n4LV.	Ali Store	administrator	$2b$10$w/v2PasiZ0kn9lCgnUM09eO/5.gD6TTmehiomGswB51wnnJSCmH3.	t	2026-01-25 14:35:25.422409	2026-01-25 14:35:25.422409	2026-01-25 17:28:28.66586	\N	\N	Your best friend name	$2b$10$fqSC7367ZcpQIVQ0sfplC.nO8Sen9H3ueXGh5dNaKWghqHJsyS.9K
-2	Cashier	$2b$10$3f4CUQm1wrF7Yo8v1AjMs.lXgMvUbIrSvgMXigiv76PJEt.Dd1uES	Hussnain	cashier	$2b$10$maodyMWoen4scAPeVhN4guQGpknB9m7qRAeKoM195E85MLqbYRz/6	t	2026-01-26 01:39:37.224922	2026-01-26 01:39:37.224922	2026-01-26 01:48:46.564016	11b5c2717006cf85459dcfeb92210f02deab0fddfe3ccbc1a696dd7d92bdd95c	2026-01-26 02:48:12.101	\N	\N
+2	Cashier	$2b$10$3f4CUQm1wrF7Yo8v1AjMs.lXgMvUbIrSvgMXigiv76PJEt.Dd1uES	Hussnain	cashier	$2b$10$maodyMWoen4scAPeVhN4guQGpknB9m7qRAeKoM195E85MLqbYRz/6	t	2026-01-26 01:39:37.224922	2026-01-26 01:39:37.224922	2026-01-26 16:16:00.65843	11b5c2717006cf85459dcfeb92210f02deab0fddfe3ccbc1a696dd7d92bdd95c	2026-01-26 02:48:12.101	\N	\N
+1	admin	$2b$10$hM9svBmzK.fY3OvMd3lJe.WzXw91xbQMb0/7VOFIvUUzU080n4LV.	Ali Store	administrator	$2b$10$w/v2PasiZ0kn9lCgnUM09eO/5.gD6TTmehiomGswB51wnnJSCmH3.	t	2026-01-25 14:35:25.422409	2026-01-25 14:35:25.422409	2026-01-28 13:47:13.81505	\N	\N	Your best friend name	$2b$10$fqSC7367ZcpQIVQ0sfplC.nO8Sen9H3ueXGh5dNaKWghqHJsyS.9K
 \.
 
 
@@ -4398,7 +4475,7 @@ COPY public.users (user_id, username, password_hash, name, role, pin_hash, is_ac
 -- Name: audit_logs_log_id_seq; Type: SEQUENCE SET; Schema: public; Owner: -
 --
 
-SELECT pg_catalog.setval('public.audit_logs_log_id_seq', 41, true);
+SELECT pg_catalog.setval('public.audit_logs_log_id_seq', 59, true);
 
 
 --
@@ -4440,14 +4517,14 @@ SELECT pg_catalog.setval('public.encryption_keys_key_id_seq', 1, false);
 -- Name: license_info_id_seq; Type: SEQUENCE SET; Schema: public; Owner: -
 --
 
-SELECT pg_catalog.setval('public.license_info_id_seq', 11, true);
+SELECT pg_catalog.setval('public.license_info_id_seq', 12, true);
 
 
 --
 -- Name: license_logs_id_seq; Type: SEQUENCE SET; Schema: public; Owner: -
 --
 
-SELECT pg_catalog.setval('public.license_logs_id_seq', 1287, true);
+SELECT pg_catalog.setval('public.license_logs_id_seq', 1288, true);
 
 
 --
@@ -4490,6 +4567,13 @@ SELECT pg_catalog.setval('public.sale_items_sale_item_id_seq', 607, true);
 --
 
 SELECT pg_catalog.setval('public.sales_sale_id_seq', 203, true);
+
+
+--
+-- Name: schema_version_id_seq; Type: SEQUENCE SET; Schema: public; Owner: -
+--
+
+SELECT pg_catalog.setval('public.schema_version_id_seq', 2, true);
 
 
 --
@@ -4677,6 +4761,22 @@ ALTER TABLE ONLY public.sales
 
 ALTER TABLE ONLY public.sales
     ADD CONSTRAINT sales_pkey PRIMARY KEY (sale_id);
+
+
+--
+-- Name: schema_version schema_version_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.schema_version
+    ADD CONSTRAINT schema_version_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: schema_version schema_version_version_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.schema_version
+    ADD CONSTRAINT schema_version_version_key UNIQUE (version);
 
 
 --
@@ -5298,5 +5398,5 @@ ALTER TABLE ONLY public.user_sessions
 -- PostgreSQL database dump complete
 --
 
-\unrestrict 10MQ5ZrEcQgDPZNxmisbS3KYgOArdeDA0AaynL76Az2HtiVTe9K85G5bSd44wxR
+\unrestrict v9kfleCq8iH1ufbtKmahwyqPcaSB378FgNPh5aEdLoDTBMBd8nqALOb2pHrO602
 

@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict 1BdJuiFaV2Ly2cGleJtUeUhZiIWc6WSTenn1ZHKRffa8nKdzxqQZlYxcH48jg39
+\restrict XEJDZkdXDoMbWuSAfzLGrlBqcJNlSojJWCVimZekudWULe4weu6OCd4PLE6aG3Z
 
 -- Dumped from database version 15.15
 -- Dumped by pg_dump version 15.15
@@ -102,6 +102,8 @@ ALTER TABLE IF EXISTS ONLY public.supplier_payments DROP CONSTRAINT IF EXISTS su
 ALTER TABLE IF EXISTS ONLY public.sub_categories DROP CONSTRAINT IF EXISTS sub_categories_pkey;
 ALTER TABLE IF EXISTS ONLY public.sub_categories DROP CONSTRAINT IF EXISTS sub_categories_category_id_sub_category_name_key;
 ALTER TABLE IF EXISTS ONLY public.settings DROP CONSTRAINT IF EXISTS settings_pkey;
+ALTER TABLE IF EXISTS ONLY public.schema_version DROP CONSTRAINT IF EXISTS schema_version_version_key;
+ALTER TABLE IF EXISTS ONLY public.schema_version DROP CONSTRAINT IF EXISTS schema_version_pkey;
 ALTER TABLE IF EXISTS ONLY public.sales DROP CONSTRAINT IF EXISTS sales_pkey;
 ALTER TABLE IF EXISTS ONLY public.sales DROP CONSTRAINT IF EXISTS sales_invoice_number_key;
 ALTER TABLE IF EXISTS ONLY public.sale_items DROP CONSTRAINT IF EXISTS sale_items_pkey;
@@ -126,6 +128,7 @@ ALTER TABLE IF EXISTS public.suppliers ALTER COLUMN supplier_id DROP DEFAULT;
 ALTER TABLE IF EXISTS public.supplier_payments ALTER COLUMN payment_id DROP DEFAULT;
 ALTER TABLE IF EXISTS public.sub_categories ALTER COLUMN sub_category_id DROP DEFAULT;
 ALTER TABLE IF EXISTS public.settings ALTER COLUMN id DROP DEFAULT;
+ALTER TABLE IF EXISTS public.schema_version ALTER COLUMN id DROP DEFAULT;
 ALTER TABLE IF EXISTS public.sales ALTER COLUMN sale_id DROP DEFAULT;
 ALTER TABLE IF EXISTS public.sale_items ALTER COLUMN sale_item_id DROP DEFAULT;
 ALTER TABLE IF EXISTS public.purchases ALTER COLUMN purchase_id DROP DEFAULT;
@@ -151,6 +154,8 @@ DROP SEQUENCE IF EXISTS public.sub_categories_sub_category_id_seq;
 DROP TABLE IF EXISTS public.sub_categories;
 DROP SEQUENCE IF EXISTS public.settings_id_seq;
 DROP TABLE IF EXISTS public.settings;
+DROP SEQUENCE IF EXISTS public.schema_version_id_seq;
+DROP TABLE IF EXISTS public.schema_version;
 DROP SEQUENCE IF EXISTS public.sales_sale_id_seq;
 DROP TABLE IF EXISTS public.sales;
 DROP SEQUENCE IF EXISTS public.sale_items_sale_item_id_seq;
@@ -1029,6 +1034,39 @@ ALTER SEQUENCE public.sales_sale_id_seq OWNED BY public.sales.sale_id;
 
 
 --
+-- Name: schema_version; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.schema_version (
+    id integer NOT NULL,
+    version integer NOT NULL,
+    applied_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    description text,
+    success boolean DEFAULT true
+);
+
+
+--
+-- Name: schema_version_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.schema_version_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: schema_version_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.schema_version_id_seq OWNED BY public.schema_version.id;
+
+
+--
 -- Name: settings; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -1342,6 +1380,13 @@ ALTER TABLE ONLY public.sales ALTER COLUMN sale_id SET DEFAULT nextval('public.s
 
 
 --
+-- Name: schema_version id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.schema_version ALTER COLUMN id SET DEFAULT nextval('public.schema_version_id_seq'::regclass);
+
+
+--
 -- Name: settings id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -1427,6 +1472,12 @@ COPY public.audit_logs (log_id, user_id, action, table_name, record_id, old_valu
 44	1	login	\N	\N	\N	\N	127.0.0.1	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) hisaabkitab/1.0.0 Chrome/120.0.6099.291 Electron/28.3.3 Safari/537.36	2026-01-26 15:09:54.9078	User logged in successfully
 45	1	view_sensitive	users	\N	\N	\N	127.0.0.1	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) hisaabkitab/1.0.0 Chrome/120.0.6099.291 Electron/28.3.3 Safari/537.36	2026-01-26 15:10:04.229431	Accessed sensitive resource: users
 46	1	logout	\N	\N	\N	\N	127.0.0.1	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) hisaabkitab/1.0.0 Chrome/120.0.6099.291 Electron/28.3.3 Safari/537.36	2026-01-26 15:10:49.447967	User logged out
+47	2	login	\N	\N	\N	\N	127.0.0.1	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) hisaabkitab/1.0.0 Chrome/120.0.6099.291 Electron/28.3.3 Safari/537.36	2026-01-26 15:24:32.524736	User logged in successfully
+48	2	logout	\N	\N	\N	\N	127.0.0.1	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) hisaabkitab/1.0.0 Chrome/120.0.6099.291 Electron/28.3.3 Safari/537.36	2026-01-26 15:46:09.857674	User logged out
+49	1	login	\N	\N	\N	\N	127.0.0.1	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) hisaabkitab/1.0.0 Chrome/120.0.6099.291 Electron/28.3.3 Safari/537.36	2026-01-26 15:47:06.715491	User logged in successfully
+50	1	view_sensitive	users	\N	\N	\N	127.0.0.1	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) hisaabkitab/1.0.0 Chrome/120.0.6099.291 Electron/28.3.3 Safari/537.36	2026-01-26 16:15:21.845325	Accessed sensitive resource: users
+51	1	logout	\N	\N	\N	\N	127.0.0.1	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) hisaabkitab/1.0.0 Chrome/120.0.6099.291 Electron/28.3.3 Safari/537.36	2026-01-26 16:15:48.729133	User logged out
+52	2	login	\N	\N	\N	\N	127.0.0.1	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) hisaabkitab/1.0.0 Chrome/120.0.6099.291 Electron/28.3.3 Safari/537.36	2026-01-26 16:16:00.659229	User logged in successfully
 \.
 
 
@@ -4016,6 +4067,16 @@ COPY public.sales (sale_id, invoice_number, date, customer_name, total_amount, t
 
 
 --
+-- Data for Name: schema_version; Type: TABLE DATA; Schema: public; Owner: -
+--
+
+COPY public.schema_version (id, version, applied_at, description, success) FROM stdin;
+1	0	2026-01-28 13:38:51.879595	Initial schema version	t
+2	1	2026-01-28 13:38:51.892114	initial schema version	t
+\.
+
+
+--
 -- Data for Name: settings; Type: TABLE DATA; Schema: public; Owner: -
 --
 
@@ -4383,6 +4444,7 @@ COPY public.suppliers (supplier_id, name, contact_number, total_purchased, total
 COPY public.user_sessions (session_id, user_id, device_id, ip_address, user_agent, created_at, expires_at, last_activity) FROM stdin;
 4c650a16-2c9e-4ce1-8185-3fb2ac997292	1	unknown	127.0.0.1	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) hisaabkitab/1.0.0 Chrome/120.0.6099.291 Electron/28.3.3 Safari/537.36	2026-01-25 17:22:36.735249	2026-01-26 17:22:36.733	2026-01-25 17:25:25.57017
 9d5c0f93-503c-4c38-9dc9-498ea31efab0	1	unknown	127.0.0.1	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) hisaabkitab/1.0.0 Chrome/120.0.6099.291 Electron/28.3.3 Safari/537.36	2026-01-25 14:35:40.74329	2026-01-26 14:35:40.742	2026-01-25 14:38:02.150494
+6308bee7-ebd7-4d45-aa36-560ee5e86119	2	unknown	127.0.0.1	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) hisaabkitab/1.0.0 Chrome/120.0.6099.291 Electron/28.3.3 Safari/537.36	2026-01-26 16:16:00.656529	2026-01-27 16:16:00.651	2026-01-26 22:57:54.588746
 a45d29f9-c221-4e0d-8dc9-c974d15c408c	1	unknown	127.0.0.1	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) hisaabkitab/1.0.0 Chrome/120.0.6099.291 Electron/28.3.3 Safari/537.36	2026-01-25 17:15:28.715005	2026-01-26 17:15:28.713	2026-01-25 17:18:32.794272
 6ba619ab-58b9-4657-aae2-e6d71e5e3dd4	1	unknown	127.0.0.1	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) hisaabkitab/1.0.0 Chrome/120.0.6099.291 Electron/28.3.3 Safari/537.36	2026-01-25 17:18:42.772413	2026-01-26 17:18:42.771	2026-01-25 17:20:20.597138
 1856fa4a-cc40-4935-b38f-e18eeacc7a04	1	unknown	127.0.0.1	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) hisaabkitab/1.0.0 Chrome/120.0.6099.291 Electron/28.3.3 Safari/537.36	2026-01-25 17:20:30.449117	2026-01-26 17:20:30.448	2026-01-25 17:22:29.012144
@@ -4394,8 +4456,8 @@ a45d29f9-c221-4e0d-8dc9-c974d15c408c	1	unknown	127.0.0.1	Mozilla/5.0 (Windows NT
 --
 
 COPY public.users (user_id, username, password_hash, name, role, pin_hash, is_active, created_at, updated_at, last_login, password_reset_token, password_reset_expires, security_question, security_answer_hash) FROM stdin;
-2	Cashier	$2b$10$3f4CUQm1wrF7Yo8v1AjMs.lXgMvUbIrSvgMXigiv76PJEt.Dd1uES	Hussnain	cashier	$2b$10$maodyMWoen4scAPeVhN4guQGpknB9m7qRAeKoM195E85MLqbYRz/6	t	2026-01-26 01:39:37.224922	2026-01-26 01:39:37.224922	2026-01-26 15:09:02.068524	11b5c2717006cf85459dcfeb92210f02deab0fddfe3ccbc1a696dd7d92bdd95c	2026-01-26 02:48:12.101	\N	\N
-1	admin	$2b$10$hM9svBmzK.fY3OvMd3lJe.WzXw91xbQMb0/7VOFIvUUzU080n4LV.	Ali Store	administrator	$2b$10$w/v2PasiZ0kn9lCgnUM09eO/5.gD6TTmehiomGswB51wnnJSCmH3.	t	2026-01-25 14:35:25.422409	2026-01-25 14:35:25.422409	2026-01-26 15:09:54.907185	\N	\N	Your best friend name	$2b$10$fqSC7367ZcpQIVQ0sfplC.nO8Sen9H3ueXGh5dNaKWghqHJsyS.9K
+1	admin	$2b$10$hM9svBmzK.fY3OvMd3lJe.WzXw91xbQMb0/7VOFIvUUzU080n4LV.	Ali Store	administrator	$2b$10$w/v2PasiZ0kn9lCgnUM09eO/5.gD6TTmehiomGswB51wnnJSCmH3.	t	2026-01-25 14:35:25.422409	2026-01-25 14:35:25.422409	2026-01-26 15:47:06.714559	\N	\N	Your best friend name	$2b$10$fqSC7367ZcpQIVQ0sfplC.nO8Sen9H3ueXGh5dNaKWghqHJsyS.9K
+2	Cashier	$2b$10$3f4CUQm1wrF7Yo8v1AjMs.lXgMvUbIrSvgMXigiv76PJEt.Dd1uES	Hussnain	cashier	$2b$10$maodyMWoen4scAPeVhN4guQGpknB9m7qRAeKoM195E85MLqbYRz/6	t	2026-01-26 01:39:37.224922	2026-01-26 01:39:37.224922	2026-01-26 16:16:00.65843	11b5c2717006cf85459dcfeb92210f02deab0fddfe3ccbc1a696dd7d92bdd95c	2026-01-26 02:48:12.101	\N	\N
 \.
 
 
@@ -4403,7 +4465,7 @@ COPY public.users (user_id, username, password_hash, name, role, pin_hash, is_ac
 -- Name: audit_logs_log_id_seq; Type: SEQUENCE SET; Schema: public; Owner: -
 --
 
-SELECT pg_catalog.setval('public.audit_logs_log_id_seq', 46, true);
+SELECT pg_catalog.setval('public.audit_logs_log_id_seq', 52, true);
 
 
 --
@@ -4495,6 +4557,13 @@ SELECT pg_catalog.setval('public.sale_items_sale_item_id_seq', 607, true);
 --
 
 SELECT pg_catalog.setval('public.sales_sale_id_seq', 203, true);
+
+
+--
+-- Name: schema_version_id_seq; Type: SEQUENCE SET; Schema: public; Owner: -
+--
+
+SELECT pg_catalog.setval('public.schema_version_id_seq', 2, true);
 
 
 --
@@ -4682,6 +4751,22 @@ ALTER TABLE ONLY public.sales
 
 ALTER TABLE ONLY public.sales
     ADD CONSTRAINT sales_pkey PRIMARY KEY (sale_id);
+
+
+--
+-- Name: schema_version schema_version_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.schema_version
+    ADD CONSTRAINT schema_version_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: schema_version schema_version_version_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.schema_version
+    ADD CONSTRAINT schema_version_version_key UNIQUE (version);
 
 
 --
@@ -5303,5 +5388,5 @@ ALTER TABLE ONLY public.user_sessions
 -- PostgreSQL database dump complete
 --
 
-\unrestrict 1BdJuiFaV2Ly2cGleJtUeUhZiIWc6WSTenn1ZHKRffa8nKdzxqQZlYxcH48jg39
+\unrestrict XEJDZkdXDoMbWuSAfzLGrlBqcJNlSojJWCVimZekudWULe4weu6OCd4PLE6aG3Z
 
